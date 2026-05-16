@@ -51,6 +51,24 @@ def _pdf_text(value):
     return escape(text)
 
 
+def _pdf_text(value):
+    """Return ReportLab/Helvetica-safe text without Unicode superscripts."""
+    replacements = {
+        "²": "^2", "³": "^3", "⁴": "^4", "₁": "1", "₂": "2",
+        "√": "sqrt", "≤": "<=", "≥": ">=", "−": "-", "×": "x", "·": "*",
+        "λ": "lambda", "π": "pi", "ȳ": "y-bar", "x-bar": "x-bar", "X̄": "X-bar",
+        "-": "-", "↓": "down", "↑": "up", "✓": "OK", "✗": "NOT OK",
+    }
+    text = str(value)
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
+
+
+def _pdf_cell(value):
+    return value if isinstance(value, Paragraph) else _pdf_text(value)
+
+
 def _styles():
     base = getSampleStyleSheet()
     return {
