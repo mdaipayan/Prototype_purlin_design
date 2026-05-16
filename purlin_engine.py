@@ -282,16 +282,18 @@ def design_purlin(inp: PurlinInputs, sec: ZSectionProps) -> DesignResult:
         formula="D < 150·t"
     )
 
-    # Check B: d_min
+    # Check B: d_min.  The bracketed expression is under a square root;
+    # omitting the root overstates the required web depth by an order of
+    # magnitude and incorrectly rejects typical validated sections.
     b1_over_t = b1 / t
     term = (b1_over_t)**2 - 281200 / Fy
-    dmin_calc = 2.8 * t * term if term > 0 else 0
+    dmin_calc = 2.8 * t * math.sqrt(term) if term > 0 else 0
     dmin = max(dmin_calc, 4.8 * t)
     r.depth_check_dmin = CheckResult(
-        label=f"d ≥ d_min = 2.8t[(b1/t)²−281200/Fy] ≥ 4.8t",
-        value=round(dmin, 2), limit=4.8*t, unit="mm",
-        status="OK" if D >= dmin else "NOT OK",
-        formula="d_min = 2.8t[(b1/t)² - 281200/Fy]"
+        label="Web depth d ≥ d_min",
+        value=round(sec.d, 2), limit=round(dmin, 2), unit="mm",
+        status="OK" if sec.d >= dmin else "NOT OK",
+        formula="d_min = max(2.8t√[(b1/t)² - 281200/Fy], 4.8t)"
     )
 
     for chk in [r.depth_check_150t, r.depth_check_dmin]:
