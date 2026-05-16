@@ -13,14 +13,14 @@ A production-grade Streamlit application for the design of cold-formed **Z-secti
 
 | Feature | Details |
 |---------|---------|
-| **Full IS 801-1975 design algorithm** | All 13 steps — loads → section classification → effective flange width → stress → deflection → overlap |
+| **Purlin Design page** | Full IS 801-1975 workflow with step-by-step formulas, substituted expressions, and calculated values |
 | **Two bay types** | End bay (coefficients 0.0772 / 0.1071) and mid bay (0.0364 / 0.0714) |
 | **Two load combinations** | Combo I: DL+LL+CL (gravity) · Combo II: WL−DL (uplift) |
 | **Lateral buckling** | Fb per IS 801 cl. 6.3(b) with 33% wind increase (cl. 6.1.2) |
 | **Deflection check** | Span/150 limit; separate coefficients for end/mid bay |
 | **Overlap check** | Moment at lap vs section capacity |
 | **PDF report** | Professional ReportLab report with all check tables |
-| **Section database** | Standard Z-sections with computed properties |
+| **Future design pages** | Placeholder pages for Girt Design and Column Design modules |
 | **CI / GitHub Actions** | Matrix tests (Python 3.10–3.12), coverage, linting |
 
 ---
@@ -81,19 +81,15 @@ No secrets or environment variables required.
 
 ```
 purlin-design-app/
-├── app.py                        # Main Streamlit app (Design page)
+├── app.py                        # Purlin Design page with IS 801 calculations
 ├── pages/
-│   └── 1_Section_Database.py     # Z-section browser
+│   ├── 2_Girt_Design.py          # Future girt design module placeholder
+│   └── 3_Column_Design.py        # Future column design module placeholder
 ├── utils/
-│   ├── purlin_engine.py          # Core design engine (Steps 1–13)
+│   ├── purlin_engine.py          # Core purlin design engine (Steps 1–13)
 │   └── pdf_report.py             # ReportLab PDF report generator
-├── tests/
-│   └── test_purlin_engine.py     # 20+ pytest unit/integration tests
-├── .github/
-│   └── workflows/
-│       └── ci.yml                # GitHub Actions CI (3 Python versions)
-├── .streamlit/
-│   └── config.toml               # Theme & server config
+├── test_purlin_engine.py         # Pytest unit/integration tests
+├── config.toml                   # Streamlit theme/server config
 └── requirements.txt
 ```
 
@@ -112,7 +108,7 @@ pytest tests/ -v
 pytest tests/ -v --cov=utils --cov-report=term-missing
 ```
 
-Expected output: **20+ tests passing** across section properties, loads, depth checks, stress checks, deflection, and overlap.
+Expected output: **20+ tests passing** across section properties, loads, depth checks, flange checks, stress checks, deflection, and overlap.
 
 ---
 

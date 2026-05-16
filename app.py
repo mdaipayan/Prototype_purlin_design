@@ -5,6 +5,7 @@ per IS 801-1975 and IS 875 (Part 3)-1987.
 """
 
 import streamlit as st
+import pandas as pd
 import math
 
 st.set_page_config(
@@ -72,6 +73,129 @@ def check_badge(chk: CheckResult) -> str:
 
 def status_icon(s: str) -> str:
     return "✅" if s == "OK" else "❌"
+
+
+def _fmt(value: float, digits: int = 3) -> str:
+    """Format calculation values compactly for formula tables."""
+    return f"{value:.{digits}f}"
+
+
+def purlin_formula_steps(inp: PurlinInputs, sec: ZSectionProps, res) -> list[dict[str, str]]:
+    """Return step-by-step formulas, substitutions, and calculated values."""
+    span_coeff = 0.0772 if inp.bay_type == "End Bay" else 0.0364
+    support_coeff = 0.1071 if inp.bay_type == "End Bay" else 0.0714
+    b1_t = sec.b1 / sec.t
+    dmin_term = b1_t**2 - 281200 / inp.fy
+    dmin_calc = 2.8 * sec.t * math.sqrt(dmin_term) if dmin_term > 0 else 0
+    dmin = max(dmin_calc, 4.8 * sec.t)
+    zxx_cm3 = res.section.Z1xx_top / 1000
+    f_values = [
+        (res.M_supp_c1 * 100) / (2 * zxx_cm3),
+        (res.M_span_c1 * 100) / zxx_cm3,
+        (res.M_supp_c2 * 100) / (2 * zxx_cm3),
+        (res.M_span_c2 * 100) / zxx_cm3,
+    ] if zxx_cm3 > 0 else [0]
+    f_actual = max(max(f_values), 1)
+    fb_wind = res.Fb * 1.33
+    return [
+        {
+            "Step": "1. Input data",
+            "Formula / check": "Use L, Ps, slope X:Y, loads, Fy, E, selected Z-section",
+            "Substitution": (
+                f"L={inp.bay_spacing:g} m, Ps={inp.purlin_spacing:g} m, "
+                f"slope={inp.slope_x:g}:{inp.slope_y:g}, Fy={inp.fy:g} N/mm², "
+                f"Z-{sec.D:g}×{sec.t:g}"
+            ),
+            "Value / result": "Inputs accepted",
+        },
+        {
+            "Step": "2. Slope factors",
+            "Formula / check": "Kx = X/√(X²+Y²); Ky = Y/√(X²+Y²)",
+            "Substitution": f"Kx={inp.slope_x:g}/√({inp.slope_x:g}²+{inp.slope_y:g}²), Ky={inp.slope_y:g}/√({inp.slope_x:g}²+{inp.slope_y:g}²)",
+            "Value / result": f"Kx={_fmt(res.Kx, 6)}, Ky={_fmt(res.Ky, 6)}",
+        },
+        {
+            "Step": "3A. Gravity UDL",
+            "Formula / check": "w₁ = (DL+LL+CL)·Kx·Ps",
+            "Substitution": f"({inp.dead_load:g}+{inp.live_load:g}+{inp.collateral_load:g})×{_fmt(res.Kx, 6)}×{inp.purlin_spacing:g}",
+            "Value / result": f"w₁={_fmt(res.w_combo1)} kg/m",
+        },
+        {
+            "Step": "3B. Wind uplift UDL",
+            "Formula / check": "w₂ = (WL·Cp1 − DL·Kx)·Ps",
+            "Substitution": f"({inp.wind_load:g}×{inp.wind_pressure_coeff:g} − {inp.dead_load:g}×{_fmt(res.Kx, 6)})×{inp.purlin_spacing:g}",
+            "Value / result": f"w₂={_fmt(res.w_combo2)} kg/m",
+        },
+        {
+            "Step": "4. Bending moments",
+            "Formula / check": "Mspan = Cs·w·L²; Msupport = Cp·w·L²",
+            "Substitution": f"Cs={span_coeff:g}, Cp={support_coeff:g}, L={inp.bay_spacing:g} m",
+            "Value / result": (
+                f"Mspan₁={_fmt(res.M_span_c1, 2)}, Msupp₁={_fmt(res.M_supp_c1, 2)}, "
+                f"Mspan₂={_fmt(res.M_span_c2, 2)}, Msupp₂={_fmt(res.M_supp_c2, 2)} kg·m"
+            ),
+        },
+        {
+            "Step": "5. Section properties",
+            "Formula / check": "Centre-line area/centroid/inertia model; Z = I/y",
+            "Substitution": f"t={sec.t:g}, d={sec.d:g}, b1={sec.b1:g}, b2={sec.b2:g}, L1={sec.L1:g}, L2={sec.L2:g}, D={sec.D:g} mm",
+            "Value / result": f"Ixx={_fmt(res.section.Ixx/1e4, 2)} cm⁴, Zxx-top={_fmt(res.section.Z1xx_top/1e3, 2)} cm³",
+        },
+        {
+            "Step": "6A. Overall depth",
+            "Formula / check": "D < 150t",
+            "Substitution": f"{sec.D:g} < 150×{sec.t:g} = {150*sec.t:g}",
+            "Value / result": f"{res.depth_check_150t.status}",
+        },
+        {
+            "Step": "6B. Minimum web depth",
+            "Formula / check": "dmin = max(2.8t√[(b1/t)² − 281200/Fy], 4.8t)",
+            "Substitution": f"max(2.8×{sec.t:g}×√[{_fmt(b1_t, 2)}² − 281200/{inp.fy:g}], 4.8×{sec.t:g})",
+            "Value / result": f"dmin={_fmt(dmin, 2)} mm; d={sec.d:g} mm → {res.depth_check_dmin.status}",
+        },
+        {
+            "Step": "7. Effective compression flange",
+            "Formula / check": "b1/t ≤ 1435/√f",
+            "Substitution": f"b1/t={_fmt(res.b1_t_actual, 2)}, f=max actual stress={_fmt(f_actual, 2)} kgf/cm²",
+            "Value / result": f"limit={_fmt(res.b1_t_limit, 2)} → {res.flange_check.status}",
+        },
+        {
+            "Step": "8. Unbraced length",
+            "Formula / check": "Lu = L/(number of sag bars + 1); Iyc = Iyy/2; Sxc = Zxx-top",
+            "Substitution": f"Lu={inp.bay_spacing:g}/({inp.num_sag_bars}+1)",
+            "Value / result": f"Lu={_fmt(res.L_unbraced)} m, Iyc={_fmt(res.Iyc, 2)} cm⁴, Sxc={_fmt(res.Sxc, 2)} cm³",
+        },
+        {
+            "Step": "9. Permissible bending stress",
+            "Formula / check": "λ=L²·Sxc/(d·Iyc); Fb per IS 801 cl. 6.3(b), capped by 0.6Fy",
+            "Substitution": f"λ={_fmt(res.lambda_val, 2)}, Fbasic=0.6×{inp.fy:g}",
+            "Value / result": f"Fb={_fmt(res.Fb, 2)} N/mm²; Fbasic={_fmt(res.F_basic, 2)} N/mm²",
+        },
+        {
+            "Step": "10. Bending stress checks",
+            "Formula / check": "fb = M/Z or M/(2Z); wind limit = 1.33Fb",
+            "Substitution": f"Zxx={_fmt(res.section.Z1xx_top, 2)} mm³, Fb={_fmt(res.Fb, 2)}, 1.33Fb={_fmt(fb_wind, 2)} N/mm²",
+            "Value / result": "; ".join(f"{chk.label}: {chk.value}/{chk.limit} {chk.status}" for chk in res.stress_checks),
+        },
+        {
+            "Step": "11. Deflection",
+            "Formula / check": "δ = C·w·Le⁴/(EI) ≤ Le/150",
+            "Substitution": f"C={'0.0065' if inp.bay_type == 'End Bay' else '0.00285'}, Le={inp.bay_spacing:g} m, E={inp.E:g} N/mm², Ixx={_fmt(res.section.Ixx, 2)} mm⁴",
+            "Value / result": f"δ₁={_fmt(res.delta_c1, 2)} mm, δ₂={_fmt(res.delta_c2, 2)} mm ≤ { _fmt(res.delta_allow, 2)} mm",
+        },
+        {
+            "Step": "12. Overlap / lap",
+            "Formula / check": "Mcap = Zxx·Fb/100; Mx = wX²/2 + wL²/12 − wLX/2",
+            "Substitution": f"X={_fmt(res.lap_used)} m, w={_fmt(res.w_governing)} kg/m, L={inp.bay_spacing:g} m",
+            "Value / result": f"Mx={_fmt(res.M_at_lap, 2)} kg·m ≤ Mcap={_fmt(res.M_capacity, 2)} kg·m → {res.lap_check.status}",
+        },
+        {
+            "Step": "13. Final adoption",
+            "Formula / check": "All mandatory checks must be OK",
+            "Substitution": "Depth + flange + stress + deflection + overlap checks",
+            "Value / result": "SECTION ADOPTED" if res.passed else "SECTION NOT ADEQUATE",
+        },
+    ]
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -214,6 +338,23 @@ st.download_button(
 
 st.divider()
 
+# ── STEP-BY-STEP FORMULAS ───────────────────────────────────────
+st.markdown("##### 🧮 Step-by-Step Purlin Design Calculations")
+st.caption("Each row shows the governing formula, substituted expression, and calculated value used in the IS 801 design workflow.")
+formula_df = pd.DataFrame(purlin_formula_steps(inp, sec, res))
+st.dataframe(formula_df, use_container_width=True, hide_index=True)
+
+with st.expander("View formulas as a printable checklist", expanded=False):
+    for row in purlin_formula_steps(inp, sec, res):
+        st.markdown(f"""
+**{row['Step']}**  
+Formula/check: `{row['Formula / check']}`  
+Expression: `{row['Substitution']}`  
+Result: **{row['Value / result']}**
+        """)
+
+st.divider()
+
 # ── RESULTS GRID ─────────────────────────────────────────────────
 # Row 1: Loads + Moments
 col_L, col_M = st.columns(2)
@@ -226,7 +367,6 @@ with col_L:
         "w (kg/m)": [f"{res.w_combo1:.3f}", f"{res.w_combo2:.3f}"],
         "Direction": ["Downward", "Upward"],
     }
-    import pandas as pd
     st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 
 with col_M:
