@@ -128,6 +128,18 @@ class TestDepthChecks:
         # D=200, 150t=150: 200 > 150 → NOT OK
         assert res.depth_check_150t.status == "NOT OK"
 
+    def test_flange_check_passes_for_adopted_section(self, mid_bay_inputs, mid_section):
+        res = design_purlin(mid_bay_inputs, mid_section)
+        assert res.flange_check.status == "OK"
+        assert res.flange_effective
+
+    def test_wide_flange_requires_reduced_width_design(self, mid_bay_inputs):
+        wide = ZSectionProps(t=2.0, d=246, b1=100, b2=66, L1=20, L2=20, D=250)
+        res = design_purlin(mid_bay_inputs, wide)
+        assert res.flange_check.status == "NOT OK"
+        assert not res.passed
+        assert res.flange_check.label in res.fail_reasons
+
 
 # ── Stress check tests ────────────────────────────────────────────
 

@@ -51,8 +51,8 @@ class ZSectionProps:
     D: float   # overall depth mm
 
     # Computed — filled by compute_section()
-    X: float = 0.0      # centroid from top (mm)
-    Y: float = 0.0      # centroid from right (mm)
+    X: float = 0.0      # horizontal centroid from web centre-line (mm)
+    Y: float = 0.0      # vertical centroid from top edge (mm)
     Ixx: float = 0.0    # mm⁴
     Iyy: float = 0.0    # mm⁴
     Z1xx_top: float = 0.0   # mm³
@@ -99,6 +99,7 @@ class DesignResult:
     b1_t_actual: float = 0.0
     b1_t_limit: float = 0.0
     flange_effective: bool = True
+    flange_check: Optional[CheckResult] = None
 
     # Lateral buckling
     L_unbraced: float = 0.0  # m
@@ -301,10 +302,18 @@ def design_purlin(inp: PurlinInputs, sec: ZSectionProps) -> DesignResult:
             r.fail_reasons.append(chk.label)
 
     # ── STEP 7: Effective flange width ────────
-    # Approximate actual stress in compression element
+    # IS 801 cl. 5.2.1.1 uses the actual compression stress in kgf/cm².
+    # Near-support lapped purlins are checked with two nested sections, so the
+    # support stress must use 2·Zxx just like the bending-stress checks below.
     Zxx_top_cm3 = r.section.Z1xx_top / 1000   # mm³ → cm³
     if Zxx_top_cm3 > 0:
-        f_actual_kgcm2 = (r.M_supp_gvn * 100) / Zxx_top_cm3  # kg/cm²
+        flange_stresses = [
+            (r.M_supp_c1 * 100) / (2 * Zxx_top_cm3),
+            (r.M_span_c1 * 100) / Zxx_top_cm3,
+            (r.M_supp_c2 * 100) / (2 * Zxx_top_cm3),
+            (r.M_span_c2 * 100) / Zxx_top_cm3,
+        ]
+        f_actual_kgcm2 = max(flange_stresses)
     else:
         f_actual_kgcm2 = 0
 
@@ -312,6 +321,14 @@ def design_purlin(inp: PurlinInputs, sec: ZSectionProps) -> DesignResult:
     r.b1_t_actual = b1 / t
     r.b1_t_limit  = 1435 / math.sqrt(f_actual_kgcm2)
     r.flange_effective = r.b1_t_actual <= r.b1_t_limit
+    r.flange_check = CheckResult(
+        label="Compression flange b1/t ≤ 1435/√f",
+        value=round(r.b1_t_actual, 2), limit=round(r.b1_t_limit, 2), unit="—",
+        status="OK" if r.flange_effective else "NOT OK",
+        formula="b1/t ≤ 1435/√f, f = max actual compression stress (kgf/cm²)"
+    )
+    if r.flange_check.status == "NOT OK":
+        r.fail_reasons.append(r.flange_check.label)
 
     # ── STEP 8: Unbraced length & Iyc ─────────
     r.L_unbraced = L / (inp.num_sag_bars + 1)   # m
