@@ -1,0 +1,77 @@
+name: CI — Purlin Design App
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ -v --cov=utils --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.11'
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install linters
+        run: pip install flake8
+      - name: Lint with flake8
+        run: |
+          flake8 utils/ app.py pages/ --max-line-length=120 \
+            --extend-ignore=E203,W503 --statistics
+
+  streamlit-smoke-test:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Smoke-test engine import
+        run: |
+          python -c "
+          from utils.purlin_engine import PurlinInputs, ZSectionProps, design_purlin
+          inp = PurlinInputs(bay_type='Mid Bay')
+          sec = ZSectionProps(t=2.0, d=246, b1=64, b2=66, L1=20, L2=20, D=250)
+          res = design_purlin(inp, sec)
+          assert res.Fb > 0, 'Fb must be positive'
+          print('Smoke test passed — Fb =', round(res.Fb, 2), 'N/mm²')
+          "
