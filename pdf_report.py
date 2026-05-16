@@ -188,8 +188,8 @@ def generate_pdf_report(
 
     props_data = [
         ["Property", "Symbol", "Value", "Unit"],
-        ["Centroid from top",      "X̄", round(res.section.X, 3), "mm"],
-        ["Centroid from right",    "Ȳ", round(res.section.Y, 3), "mm"],
+        ["Centroid x̄ from web centre-line", "x̄", round(res.section.X, 3), "mm"],
+        ["Centroid ȳ from top",             "ȳ", round(res.section.Y, 3), "mm"],
         ["Moment of inertia (XX)", "Ixx", f"{res.section.Ixx:.2f}", "mm⁴"],
         ["Moment of inertia (YY)", "Iyy", f"{res.section.Iyy:.2f}", "mm⁴"],
         ["Section modulus top",    "Z1xx-top", f"{res.section.Z1xx_top:.2f}", "mm³"],
@@ -201,10 +201,11 @@ def generate_pdf_report(
     story.append(_table(props_data, [W*0.38, W*0.18, W*0.26, W*0.18]))
 
     # ── STEP 6: Depth Checks ───────────────────
-    story += _section_head("5. Section Classification Checks (IS 801 cl. 5.2.4)", styles)
+    story += _section_head("5. Section Classification Checks (IS 801 cl. 5.2.4 & 5.2.1.1)", styles)
     chk_data = [["Check", "Value", "Limit", "Status"]]
     chk_data.append(_check_row(res.depth_check_150t, styles))
     chk_data.append(_check_row(res.depth_check_dmin, styles))
+    chk_data.append(_check_row(res.flange_check, styles))
     t_chk = Table(chk_data, colWidths=[W*0.46, W*0.18, W*0.22, W*0.14])
     t_chk.setStyle(TableStyle([
         ("FONTNAME",  (0, 0), (-1, 0),  "Helvetica-Bold"),

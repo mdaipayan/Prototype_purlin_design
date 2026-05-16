@@ -262,10 +262,11 @@ with col_a:
     st.dataframe(pd.DataFrame(props), use_container_width=True, hide_index=True)
 
 with col_b:
-    st.metric("Centroid X̄ (from top)", f"{s.Y:.3f} mm")
+    st.metric("Centroid ȳ (from top)", f"{s.Y:.3f} mm")
+    st.metric("Centroid x̄ (from web CL)", f"{s.X:.3f} mm")
     st.metric("Cross-section Area", f"{s.area:.3f} cm²")
     st.metric("Self-weight", f"{s.weight_per_m:.3f} kg/m")
-    eff = "✅ Full flange effective" if res.flange_effective else "⚠️ Reduced flange width"
+    eff = "✅ Full flange effective" if res.flange_effective else "❌ Reduced-width section required"
     st.metric("Compression flange", eff)
 
 # Row 3: Depth Checks + Stress Checks
@@ -274,7 +275,7 @@ col_d, col_s = st.columns(2)
 
 with col_d:
     st.markdown("###### Depth checks (IS 801 cl. 5.2.4)")
-    for chk in [res.depth_check_150t, res.depth_check_dmin]:
+    for chk in [res.depth_check_150t, res.depth_check_dmin, res.flange_check]:
         icon = "✅" if chk.status == "OK" else "❌"
         color = "#EAF6EE" if chk.status == "OK" else "#FCEAEA"
         st.markdown(
