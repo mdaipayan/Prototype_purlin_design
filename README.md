@@ -13,7 +13,8 @@ A production-grade Streamlit application for the design of cold-formed **Z-secti
 
 | Feature | Details |
 |---------|---------|
-| **Purlin Design page** | Full IS 801-1975 workflow with step-by-step formulas, substituted expressions, and calculated values |
+| **Three-page design suite** | Landing page plus Purlin Design, Girt Design, and Column Design pages |
+| **Purlin Design page** | Full IS 801-1975 workflow with clause-referenced formulas, substituted expressions, calculated values, and a professional PDF report |
 | **Two bay types** | End bay (coefficients 0.0772 / 0.1071) and mid bay (0.0364 / 0.0714) |
 | **Two load combinations** | Combo I: DL+LL+CL (gravity) · Combo II: WL−DL (uplift) |
 | **Lateral buckling** | Fb per IS 801 cl. 6.3(b) with 33% wind increase (cl. 6.1.2) |
@@ -81,8 +82,9 @@ No secrets or environment variables required.
 
 ```
 purlin-design-app/
-├── app.py                        # Purlin Design page with IS 801 calculations
+├── app.py                        # Landing page / module selector
 ├── pages/
+│   ├── 1_Purlin_Design.py        # Active purlin design page with IS 801 calculations
 │   ├── 2_Girt_Design.py          # Future girt design module placeholder
 │   └── 3_Column_Design.py        # Future column design module placeholder
 ├── utils/
