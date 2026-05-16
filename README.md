@@ -13,7 +13,7 @@ A production-grade Streamlit application for the design of cold-formed **Z-secti
 
 | Feature | Details |
 |---------|---------|
-| **Full IS 801-1975 design algorithm** | All 13 steps — loads → section classification → stress → deflection → overlap |
+| **Full IS 801-1975 design algorithm** | All 13 steps — loads → section classification → effective flange width → stress → deflection → overlap |
 | **Two bay types** | End bay (coefficients 0.0772 / 0.1071) and mid bay (0.0364 / 0.0714) |
 | **Two load combinations** | Combo I: DL+LL+CL (gravity) · Combo II: WL−DL (uplift) |
 | **Lateral buckling** | Fb per IS 801 cl. 6.3(b) with 33% wind increase (cl. 6.1.2) |
@@ -34,7 +34,7 @@ Step 3  ── Design load per metre — 2 combinations
 Step 4  ── Design bending moments (end bay / mid bay coefficients)
 Step 5  ── Z-section property computation (centroid, Ixx, Iyy, Zxx, Zyy)
 Step 6  ── Depth checks: D < 150t  &  d ≥ d_min  (IS 801 cl. 5.2.4 & 5.2.1.2)
-Step 7  ── Effective flange width: (b1/t) ≤ 1435/√f  (IS 801 cl. 5.2.1.1)
+Step 7  ── Effective flange width: (b1/t) ≤ 1435/√f using maximum actual compression stress (IS 801 cl. 5.2.1.1)
 Step 8  ── Unbraced length, Iyc, Sxc (sag bar layout)
 Step 9  ── Permissible bending stress Fb  (IS 801 cl. 6.3b)
 Step 10 ── Actual vs permissible stress — 4 check cases
@@ -122,7 +122,7 @@ Expected output: **20+ tests passing** across section properties, loads, depth c
 |-------|------------------|
 | Overall depth | IS 801-1975, cl. 5.2.4 |
 | Minimum depth | IS 801-1975, cl. 5.2.1.2 |
-| Effective flange width | IS 801-1975, cl. 5.2.1.1 |
+| Effective flange width | IS 801-1975, cl. 5.2.1.1 — full-width check; section is rejected when reduced-width properties are required |
 | Permissible bending stress | IS 801-1975, cl. 6.3(b) |
 | Basic design stress | IS 801-1975, cl. 6.1 |
 | Wind stress increase | IS 801-1975, cl. 6.1.2 |
