@@ -345,7 +345,7 @@ def purlin_formula_steps(inp: PurlinInputs, sec: ZSectionProps, res) -> list[dic
         {
             "Step": "5. Section properties",
             "IS reference": "IS 801 section-property basis",
-            "Formula / check": "Centre-line area/centroid/inertia model; Z = I/y",
+            "Formula / check": "Excel plate-line area/centroid/inertia model; Z = I/y",
             "Substitution": f"t={sec.t:g}, d={sec.d:g}, b1={sec.b1:g}, b2={sec.b2:g}, L1={sec.L1:g}, L2={sec.L2:g}, D={sec.D:g} mm",
             "Value / result": f"Ixx={_fmt(res.section.Ixx/1e4, 2)} cm⁴, Zxx-top={_fmt(res.section.Z1xx_top/1e3, 2)} cm³",
         },
