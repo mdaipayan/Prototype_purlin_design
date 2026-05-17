@@ -21,6 +21,7 @@ A production-grade Streamlit application for the design of cold-formed **Z-secti
 | **Deflection check** | Span/150 limit; separate coefficients for end/mid bay |
 | **Overlap check** | Moment at lap vs section capacity |
 | **PDF report** | Professional ReportLab report with all check tables |
+| **Token protection** | Shared token gate for the landing page, design pages, and section database |
 | **Future design pages** | Placeholder pages for Girt Design and Column Design modules |
 | **CI / GitHub Actions** | Matrix tests (Python 3.10–3.12), coverage, linting |
 
@@ -56,11 +57,15 @@ cd purlin-design-app
 # Install
 pip install -r requirements.txt
 
+# Optional: set a production access token (recommended)
+# macOS/Linux
+export APP_ACCESS_TOKEN="change-this-token"
+
 # Run
 streamlit run app.py
 ```
 
-Open [http://localhost:8501](http://localhost:8501) in your browser.
+Open [http://localhost:8501](http://localhost:8501) in your browser and sign in with your access token. If `APP_ACCESS_TOKEN`/`APP_ACCESS_TOKENS` is not set, the local fallback token is `purlin-dev-token`.
 
 ---
 
@@ -72,9 +77,24 @@ Open [http://localhost:8501](http://localhost:8501) in your browser.
    - **Repository**: `YOUR_USERNAME/purlin-design-app`
    - **Branch**: `main`
    - **Main file path**: `app.py`
-4. Click **Deploy**.
+4. Add a Streamlit secret named `APP_ACCESS_TOKEN` under app settings. For multiple valid tokens, use `APP_ACCESS_TOKENS` as a comma-separated string or a TOML list.
+5. Click **Deploy**.
 
-No secrets or environment variables required.
+For production deployments, set a strong `APP_ACCESS_TOKEN` or `APP_ACCESS_TOKENS` instead of relying on the local fallback token. Legacy `APP_PASSWORD` is still accepted only for backwards compatibility.
+
+### Streamlit secrets token setup
+
+For Streamlit Community Cloud, add one of the following under **App settings → Secrets**:
+
+```toml
+# Single-token setup
+APP_ACCESS_TOKEN = "replace-with-a-long-random-token"
+
+# Or multi-token setup for multiple users
+APP_ACCESS_TOKENS = ["engineer-token-1", "reviewer-token-2"]
+```
+
+You can also open the app with `?token=YOUR_TOKEN` or `?access_token=YOUR_TOKEN`; the token is validated, stored in the session, and then removed from the URL.
 
 ---
 
@@ -88,6 +108,7 @@ purlin-design-app/
 │   ├── 2_Girt_Design.py          # Future girt design module placeholder
 │   └── 3_Column_Design.py        # Future column design module placeholder
 ├── utils/
+│   ├── auth.py                   # Shared token gate and branding helpers
 │   ├── purlin_engine.py          # Core purlin design engine (Steps 1–13)
 │   └── pdf_report.py             # ReportLab PDF report generator
 ├── test_purlin_engine.py         # Pytest unit/integration tests
