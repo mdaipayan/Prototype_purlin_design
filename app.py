@@ -2,6 +2,8 @@
 
 import streamlit as st
 
+from utils.auth import brand_mark, render_brand_block, render_security_controls, require_authentication
+
 st.set_page_config(
     page_title="Steel Member Design Suite",
     page_icon="🏗️",
@@ -116,12 +118,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+require_authentication()
+
 st.markdown(
-    """
+    f"""
 <div class="hero">
   <div class="hero-grid">
     <div>
-      <span class="eyebrow">Structural engineering dashboard</span>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">{brand_mark(62)}<span class="eyebrow">Structural engineering dashboard</span></div>
       <h1>Steel Member Design Suite</h1>
       <p>A polished calculation environment for cold-formed steel member design. Start with the available purlin workflow for IS 801-1975 checks, transparent formula substitutions, acceptance summaries, and PDF reporting.</p>
     </div>
@@ -136,6 +140,15 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
+with st.sidebar:
+    render_brand_block()
+    render_security_controls()
+    st.markdown("### Navigation")
+    st.caption("Use the Streamlit page menu above to open the active design module.")
+    st.markdown("---")
+    st.markdown("**Active module:** Purlin Design")
+    st.markdown("**Security:** password protected")
 
 st.markdown('<div class="section-kicker">Design modules</div>', unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)

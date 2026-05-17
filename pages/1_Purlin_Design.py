@@ -9,6 +9,8 @@ import pandas as pd
 import math
 import html
 
+from utils.auth import render_brand_block, render_security_controls, require_authentication
+
 st.set_page_config(
     page_title="Purlin Design — IS 801",
     page_icon="🏗️",
@@ -167,6 +169,8 @@ button[kind="secondary"] { border-radius: 999px; }
 @media (max-width: 980px) { .kpi-grid, .viz-wrap { grid-template-columns: 1fr; } }
 </style>
 """, unsafe_allow_html=True)
+
+require_authentication()
 
 
 # ── Imports ──────────────────────────────────────────────────────
@@ -420,54 +424,100 @@ def purlin_formula_steps(inp: PurlinInputs, sec: ZSectionProps, res) -> list[dic
 # ══════════════════════════════════════════════════════════════════
 
 with st.sidebar:
-    st.image("https://img.icons8.com/ios/60/1B3A6B/structure.png", width=40)
-    st.title("Purlin Design")
-    st.caption("IS 801-1975 / IS 875 (Part 3)-1987")
+    render_brand_block("Purlin Design", "IS 801-1975 / IS 875 (Part 3)-1987")
+    render_security_controls()
     st.divider()
+
+    presets = {
+        "AIR concourse default": {
+            "project_name": "AIR Concourse Building", "bay_type": "End Bay",
+            "bay_spacing": 9.347, "purlin_spacing": 1.5, "slope_x": 10.0, "slope_y": 1.0,
+            "num_sag": 4, "dl": 15.0, "ll": 75.0, "cl": 75.0, "wl": 130.0,
+            "cp1": 1.4, "fy": 345.0, "E_mod": 200000.0,
+            "t_sec": 2.0, "d_sec": 246.0, "D_sec": 250.0,
+            "b1_sec": 64.0, "b2_sec": 66.0, "L1_sec": 20.0, "L2_sec": 20.0,
+            "lap_mm": 0,
+        },
+        "Light roof review": {
+            "project_name": "Light Roof Review", "bay_type": "Mid Bay",
+            "bay_spacing": 7.5, "purlin_spacing": 1.4, "slope_x": 10.0, "slope_y": 1.0,
+            "num_sag": 3, "dl": 12.0, "ll": 50.0, "cl": 25.0, "wl": 110.0,
+            "cp1": 1.2, "fy": 345.0, "E_mod": 200000.0,
+            "t_sec": 1.6, "d_sec": 246.0, "D_sec": 250.0,
+            "b1_sec": 60.0, "b2_sec": 62.0, "L1_sec": 16.0, "L2_sec": 16.0,
+            "lap_mm": 0,
+        },
+        "High wind trial": {
+            "project_name": "High Wind Trial", "bay_type": "End Bay",
+            "bay_spacing": 9.347, "purlin_spacing": 1.5, "slope_x": 10.0, "slope_y": 1.0,
+            "num_sag": 5, "dl": 15.0, "ll": 75.0, "cl": 75.0, "wl": 165.0,
+            "cp1": 1.4, "fy": 345.0, "E_mod": 200000.0,
+            "t_sec": 2.5, "d_sec": 245.0, "D_sec": 250.0,
+            "b1_sec": 64.0, "b2_sec": 66.0, "L1_sec": 20.0, "L2_sec": 20.0,
+            "lap_mm": 0,
+        },
+    }
+    preset_name = st.selectbox(
+        "Design starting preset",
+        list(presets),
+        help="Choose a curated starting point, then fine-tune the inputs below.",
+    )
+    defaults = presets[preset_name]
+    key_prefix = preset_name.lower().replace(" ", "_")
 
     # Project info
     st.markdown('<div class="section-header">Project</div>', unsafe_allow_html=True)
-    project_name = st.text_input("Project name", value="AIR Concourse Building")
-    bay_type = st.selectbox("Bay type", ["End Bay", "Mid Bay"])
+    project_name = st.text_input("Project name", value=defaults["project_name"], key=f"project_{key_prefix}")
+    bay_type = st.selectbox(
+        "Bay type",
+        ["End Bay", "Mid Bay"],
+        index=["End Bay", "Mid Bay"].index(defaults["bay_type"]),
+        help="End bay uses higher continuous-purlin moment coefficients than mid bay.",
+        key=f"bay_type_{key_prefix}",
+    )
 
     st.markdown('<div class="section-header">Geometry</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
-    bay_spacing    = c1.number_input("Bay spacing L (m)",   value=9.347, step=0.001, format="%.3f")
-    purlin_spacing = c2.number_input("Purlin spacing Ps (m)", value=1.5, step=0.1)
+    bay_spacing = c1.number_input("Bay spacing L (m)", value=defaults["bay_spacing"], min_value=0.1, step=0.001, format="%.3f", help="Effective purlin span between frames.", key=f"bay_spacing_{key_prefix}")
+    purlin_spacing = c2.number_input("Purlin spacing Ps (m)", value=defaults["purlin_spacing"], min_value=0.1, step=0.1, help="Tributary roof width supported by each purlin.", key=f"purlin_spacing_{key_prefix}")
     c1, c2 = st.columns(2)
-    slope_x = c1.number_input("Slope X", value=10.0, step=0.5)
-    slope_y = c2.number_input("Slope Y", value=1.0,  step=0.1)
-    num_sag = st.number_input("Number of sag bars", value=4, min_value=1, max_value=10, step=1)
+    slope_x = c1.number_input("Slope X", value=defaults["slope_x"], min_value=0.1, step=0.5, key=f"slope_x_{key_prefix}")
+    slope_y = c2.number_input("Slope Y", value=defaults["slope_y"], min_value=0.0, step=0.1, key=f"slope_y_{key_prefix}")
+    num_sag = st.number_input("Number of sag bars", value=defaults["num_sag"], min_value=1, max_value=10, step=1, help="Used to determine unbraced length Lu = L/(n+1).", key=f"num_sag_{key_prefix}")
 
     st.markdown('<div class="section-header">Loads (kg/m²)</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
-    dl = c1.number_input("Dead load DL",   value=15.0,  step=1.0)
-    ll = c2.number_input("Live load LL",   value=75.0,  step=1.0)
+    dl = c1.number_input("Dead load DL", value=defaults["dl"], min_value=0.0, step=1.0, key=f"dl_{key_prefix}")
+    ll = c2.number_input("Live load LL", value=defaults["ll"], min_value=0.0, step=1.0, key=f"ll_{key_prefix}")
     c1, c2 = st.columns(2)
-    cl = c1.number_input("Collateral CL",  value=75.0,  step=1.0)
-    wl = c2.number_input("Wind load WL",   value=130.0, step=1.0)
-    cp1 = st.number_input("Wind coeff Cp1 (IS 875 Table 5)", value=1.4, step=0.05)
+    cl = c1.number_input("Collateral CL", value=defaults["cl"], min_value=0.0, step=1.0, key=f"cl_{key_prefix}")
+    wl = c2.number_input("Wind load WL", value=defaults["wl"], min_value=0.0, step=1.0, key=f"wl_{key_prefix}")
+    cp1 = st.number_input("Wind coeff Cp1 (IS 875 Table 5)", value=defaults["cp1"], min_value=0.0, step=0.05, help="External/internal pressure coefficient used in wind uplift combination.", key=f"cp1_{key_prefix}")
 
     st.markdown('<div class="section-header">Material</div>', unsafe_allow_html=True)
     c1, c2 = st.columns(2)
-    fy = c1.number_input("Fy (N/mm²)", value=345.0, step=5.0)
-    E_mod = c2.number_input("E (N/mm²)", value=200000.0, step=1000.0, format="%.0f")
+    fy = c1.number_input("Fy (N/mm²)", value=defaults["fy"], min_value=1.0, step=5.0, key=f"fy_{key_prefix}")
+    E_mod = c2.number_input("E (N/mm²)", value=defaults["E_mod"], min_value=1.0, step=1000.0, format="%.0f", key=f"E_mod_{key_prefix}")
 
-    st.markdown('<div class="section-header">Z-Section Dimensions (mm)</div>',
-                unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Z-Section Dimensions (mm)</div>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    t_sec  = c1.number_input("t", value=2.0,   step=0.5, format="%.1f")
-    d_sec  = c2.number_input("d", value=246.0, step=2.0, format="%.1f")
-    D_sec  = c3.number_input("D (overall)", value=250.0, step=2.0, format="%.1f")
+    t_sec = c1.number_input("t", value=defaults["t_sec"], min_value=0.1, step=0.5, format="%.1f", key=f"t_sec_{key_prefix}")
+    d_sec = c2.number_input("d", value=defaults["d_sec"], min_value=1.0, step=2.0, format="%.1f", key=f"d_sec_{key_prefix}")
+    D_sec = c3.number_input("D (overall)", value=defaults["D_sec"], min_value=1.0, step=2.0, format="%.1f", key=f"D_sec_{key_prefix}")
     c1, c2 = st.columns(2)
-    b1_sec = c1.number_input("b1 (top flange)", value=64.0, step=1.0)
-    b2_sec = c2.number_input("b2 (bot flange)", value=66.0, step=1.0)
+    b1_sec = c1.number_input("b1 (top flange)", value=defaults["b1_sec"], min_value=1.0, step=1.0, key=f"b1_sec_{key_prefix}")
+    b2_sec = c2.number_input("b2 (bot flange)", value=defaults["b2_sec"], min_value=1.0, step=1.0, key=f"b2_sec_{key_prefix}")
     c1, c2 = st.columns(2)
-    L1_sec = c1.number_input("L1 (top lip)", value=20.0, step=1.0)
-    L2_sec = c2.number_input("L2 (bot lip)", value=20.0, step=1.0)
+    L1_sec = c1.number_input("L1 (top lip)", value=defaults["L1_sec"], min_value=0.0, step=1.0, key=f"L1_sec_{key_prefix}")
+    L2_sec = c2.number_input("L2 (bot lip)", value=defaults["L2_sec"], min_value=0.0, step=1.0, key=f"L2_sec_{key_prefix}")
 
     st.markdown('<div class="section-header">Overlap</div>', unsafe_allow_html=True)
-    lap_mm = st.number_input("Lap length (mm) — 0 = auto", value=0, step=25)
+    lap_mm = st.number_input("Lap length (mm) — 0 = auto", value=defaults["lap_mm"], min_value=0, step=25, help="Use 0 to let the app search for a satisfactory lap length.", key=f"lap_mm_{key_prefix}")
+
+    if D_sec < d_sec:
+        st.warning("Overall depth D should be greater than or equal to clear web depth d.", icon="⚠️")
+    if L1_sec < t_sec or L2_sec < t_sec:
+        st.warning("Lip depth is less than thickness; the section-property model will reduce effective lip depth to zero at the bend.", icon="⚠️")
 
     run_btn = st.button("▶  Run Design", type="primary", use_container_width=True)
 
