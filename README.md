@@ -21,6 +21,7 @@ A production-grade Streamlit application for the design of cold-formed **Z-secti
 | **Deflection check** | Span/150 limit; separate coefficients for end/mid bay |
 | **Overlap check** | Moment at lap vs section capacity |
 | **PDF report** | Professional ReportLab report with all check tables |
+| **Password protection** | Shared login gate for the landing page, design pages, and section database |
 | **Future design pages** | Placeholder pages for Girt Design and Column Design modules |
 | **CI / GitHub Actions** | Matrix tests (Python 3.10–3.12), coverage, linting |
 
@@ -56,11 +57,15 @@ cd purlin-design-app
 # Install
 pip install -r requirements.txt
 
+# Optional: set a production password (recommended)
+# macOS/Linux
+export APP_PASSWORD="change-this-password"
+
 # Run
 streamlit run app.py
 ```
 
-Open [http://localhost:8501](http://localhost:8501) in your browser.
+Open [http://localhost:8501](http://localhost:8501) in your browser and sign in. If `APP_PASSWORD` is not set, the local fallback password is `purlin@2026`.
 
 ---
 
@@ -72,9 +77,10 @@ Open [http://localhost:8501](http://localhost:8501) in your browser.
    - **Repository**: `YOUR_USERNAME/purlin-design-app`
    - **Branch**: `main`
    - **Main file path**: `app.py`
-4. Click **Deploy**.
+4. Add a Streamlit secret named `APP_PASSWORD` under app settings, or provide the same value as an environment variable where supported.
+5. Click **Deploy**.
 
-No secrets or environment variables required.
+For production deployments, set a strong `APP_PASSWORD` instead of relying on the local fallback password.
 
 ---
 
@@ -88,6 +94,7 @@ purlin-design-app/
 │   ├── 2_Girt_Design.py          # Future girt design module placeholder
 │   └── 3_Column_Design.py        # Future column design module placeholder
 ├── utils/
+│   ├── auth.py                   # Shared password gate and branding helpers
 │   ├── purlin_engine.py          # Core purlin design engine (Steps 1–13)
 │   └── pdf_report.py             # ReportLab PDF report generator
 ├── test_purlin_engine.py         # Pytest unit/integration tests

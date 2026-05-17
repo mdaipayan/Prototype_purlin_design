@@ -6,6 +6,7 @@ Produces a polished, industry-style IS-code calculation report.
 from io import BytesIO
 from datetime import datetime
 from xml.sax.saxutils import escape
+import re
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -38,31 +39,35 @@ WHITE = colors.white
 
 
 def _pdf_text(value):
-    """Return ReportLab-safe text without unsupported superscripts/symbols."""
+    """Return escaped ReportLab paragraph markup with professional powers."""
     replacements = {
-        "²": "^2", "³": "^3", "⁴": "^4", "₁": "1", "₂": "2",
-        "√": "sqrt", "≤": "<=", "≥": ">=", "−": "-", "×": "x", "·": "*",
-        "λ": "lambda", "π": "pi", "δ": "delta", "ȳ": "y-bar", "x̄": "x-bar",
-        "X̄": "X-bar", "—": "-", "↓": "down", "↑": "up", "✓": "OK", "✗": "NOT OK",
+        "²": "^2", "³": "^3", "⁴": "^4",
+        "₁": "1", "₂": "2",
+        "−": "-", "—": "-", "✓": "OK", "✗": "NOT OK",
+        "kg*m": "kg·m", "N*mm": "N·mm",
     }
     text = str(value)
     for old, new in replacements.items():
         text = text.replace(old, new)
-    return escape(text)
+
+    text = escape(text)
+    text = text.replace("&lt;=", "&le;").replace("&gt;=", "&ge;")
+    text = text.replace("*", "×")
+    return re.sub(r"\^([0-9]+)", r"<super>\1</super>", text)
 
 
-def _pdf_text(value):
-    """Return ReportLab/Helvetica-safe text without Unicode superscripts."""
-    replacements = {
-        "²": "^2", "³": "^3", "⁴": "^4", "₁": "1", "₂": "2",
-        "√": "sqrt", "≤": "<=", "≥": ">=", "−": "-", "×": "x", "·": "*",
-        "λ": "lambda", "π": "pi", "ȳ": "y-bar", "x-bar": "x-bar", "X̄": "X-bar",
-        "-": "-", "↓": "down", "↑": "up", "✓": "OK", "✗": "NOT OK",
-    }
-    text = str(value)
-    for old, new in replacements.items():
-        text = text.replace(old, new)
-    return text
+def _value_with_unit(value, unit):
+    """Format a table value with its unit immediately beside it."""
+    if unit in (None, "", "-", "—"):
+        return str(value)
+    return f"{value} {unit}"
+
+
+def _limit_with_unit(limit, unit):
+    """Format a limit with professional inequality and adjacent unit."""
+    if unit in (None, "", "-", "—"):
+        return f"≤ {limit}"
+    return f"≤ {limit} {unit}"
 
 
 def _pdf_cell(value):
@@ -181,14 +186,19 @@ def _check_row(chk: CheckResult, styles):
     status_style = styles["ok"] if chk.status == "OK" else styles["fail"]
     return [
         Paragraph(_pdf_text(chk.label), styles["table_cell"]),
-        Paragraph(_pdf_text(f"{chk.value} {chk.unit}"), styles["table_cell"]),
-        Paragraph(_pdf_text(f"<= {chk.limit} {chk.unit}"), styles["table_cell"]),
+        Paragraph(_pdf_text(_value_with_unit(chk.value, chk.unit)), styles["table_cell"]),
+        Paragraph(_pdf_text(_limit_with_unit(chk.limit, chk.unit)), styles["table_cell"]),
         Paragraph(_pdf_text(chk.status), status_style),
     ]
 
 
 def _plain_check_row(chk: CheckResult):
-    return [chk.label, f"{chk.value} {chk.unit}", f"<= {chk.limit} {chk.unit}", chk.status]
+    return [
+        chk.label,
+        _value_with_unit(chk.value, chk.unit),
+        _limit_with_unit(chk.limit, chk.unit),
+        chk.status,
+    ]
 
 
 def _design_step_rows(inp: PurlinInputs, sec: ZSectionProps, res: DesignResult):
@@ -330,39 +340,39 @@ def generate_pdf_report(
     # ── Input Data ────────────────────────────────────────────────
     story += _section_head("Input Data", styles, 2)
     inp_data = [
-        ["Parameter", "Symbol", "Value", "Unit"],
-        ["Bay spacing (effective length)", "L = Le", inp.bay_spacing, "m"],
-        ["Purlin spacing", "Ps", inp.purlin_spacing, "m"],
-        ["Roof slope", "X:Y", f"{inp.slope_x}:{inp.slope_y}", "-"],
-        ["Dead load intensity", "DL", inp.dead_load, "kg/m^2"],
-        ["Live load intensity", "LL", inp.live_load, "kg/m^2"],
-        ["Collateral load", "CL", inp.collateral_load, "kg/m^2"],
-        ["Wind load intensity", "WL", inp.wind_load, "kg/m^2"],
-        ["Wind pressure coefficient", "Cp1", inp.wind_pressure_coeff, "-"],
-        ["Yield strength of steel", "Fy", inp.fy, "N/mm^2"],
-        ["Modulus of elasticity", "E", inp.E, "N/mm^2"],
-        ["Number of sag bars", "n", inp.num_sag_bars, "nos"],
+        ["Parameter", "Symbol", "Value"],
+        ["Bay spacing (effective length)", "L = Le", _value_with_unit(inp.bay_spacing, "m")],
+        ["Purlin spacing", "Ps", _value_with_unit(inp.purlin_spacing, "m")],
+        ["Roof slope", "X:Y", f"{inp.slope_x}:{inp.slope_y}"],
+        ["Dead load intensity", "DL", _value_with_unit(inp.dead_load, "kg/m^2")],
+        ["Live load intensity", "LL", _value_with_unit(inp.live_load, "kg/m^2")],
+        ["Collateral load", "CL", _value_with_unit(inp.collateral_load, "kg/m^2")],
+        ["Wind load intensity", "WL", _value_with_unit(inp.wind_load, "kg/m^2")],
+        ["Wind pressure coefficient", "Cp1", inp.wind_pressure_coeff],
+        ["Yield strength of steel", "Fy", _value_with_unit(inp.fy, "N/mm^2")],
+        ["Modulus of elasticity", "E", _value_with_unit(inp.E, "N/mm^2")],
+        ["Number of sag bars", "n", _value_with_unit(inp.num_sag_bars, "nos")],
     ]
-    story.append(_table(inp_data, [W * 0.40, W * 0.18, W * 0.22, W * 0.20], styles))
+    story.append(_table(inp_data, [W * 0.44, W * 0.20, W * 0.36], styles))
 
     # ── Loads and moments ─────────────────────────────────────────
     story += _section_head("Load Calculations", styles, 3)
     load_data = [
-        ["Item", "Formula", "Value", "Unit"],
-        ["Kx (along-slope factor)", "X / sqrt(X^2+Y^2)", round(res.Kx, 6), "-"],
-        ["Ky (cross-slope factor)", "Y / sqrt(X^2+Y^2)", round(res.Ky, 6), "-"],
-        ["Combo I - DL+LL+CL (down)", "(DL+LL+CL)*Kx*Ps", round(res.w_combo1, 3), "kg/m"],
-        ["Combo II - WL-DL (up)", "(WL*Cp1-DL*Kx)*Ps", round(res.w_combo2, 3), "kg/m"],
+        ["Item", "Formula", "Value"],
+        ["Kx (along-slope factor)", "X / sqrt(X^2+Y^2)", round(res.Kx, 6)],
+        ["Ky (cross-slope factor)", "Y / sqrt(X^2+Y^2)", round(res.Ky, 6)],
+        ["Combo I - DL+LL+CL (down)", "(DL+LL+CL)*Kx*Ps", _value_with_unit(round(res.w_combo1, 3), "kg/m")],
+        ["Combo II - WL-DL (up)", "(WL*Cp1-DL*Kx)*Ps", _value_with_unit(round(res.w_combo2, 3), "kg/m")],
     ]
-    story.append(_table(load_data, [W * 0.36, W * 0.34, W * 0.16, W * 0.14], styles))
+    story.append(_table(load_data, [W * 0.38, W * 0.38, W * 0.24], styles))
 
     story += _section_head("Design Bending Moments", styles, 4)
     mom_data = [
-        ["Load case", "Location", "Coefficient", "Moment (kg*m)"],
-        ["DL+LL+CL", "Midspan", f"0.{'0772' if inp.bay_type == 'End Bay' else '0364'}", round(res.M_span_c1, 2)],
-        ["DL+LL+CL", "Near support", f"0.{'1071' if inp.bay_type == 'End Bay' else '0714'}", round(res.M_supp_c1, 2)],
-        ["DL+WL", "Midspan", f"0.{'0772' if inp.bay_type == 'End Bay' else '0364'}", round(res.M_span_c2, 2)],
-        ["DL+WL", "Near support", f"0.{'1071' if inp.bay_type == 'End Bay' else '0714'}", round(res.M_supp_c2, 2)],
+        ["Load case", "Location", "Coefficient", "Moment"],
+        ["DL+LL+CL", "Midspan", f"0.{'0772' if inp.bay_type == 'End Bay' else '0364'}", _value_with_unit(round(res.M_span_c1, 2), "kg·m")],
+        ["DL+LL+CL", "Near support", f"0.{'1071' if inp.bay_type == 'End Bay' else '0714'}", _value_with_unit(round(res.M_supp_c1, 2), "kg·m")],
+        ["DL+WL", "Midspan", f"0.{'0772' if inp.bay_type == 'End Bay' else '0364'}", _value_with_unit(round(res.M_span_c2, 2), "kg·m")],
+        ["DL+WL", "Near support", f"0.{'1071' if inp.bay_type == 'End Bay' else '0714'}", _value_with_unit(round(res.M_supp_c2, 2), "kg·m")],
     ]
     story.append(_table(mom_data, [W * 0.25, W * 0.25, W * 0.22, W * 0.28], styles))
 
@@ -375,25 +385,33 @@ def generate_pdf_report(
     # ── Section properties and checks ─────────────────────────────
     story += _section_head("Z-Section Properties", styles, 6)
     dims_data = [
-        ["t (mm)", "d (mm)", "b1 (mm)", "b2 (mm)", "L1 (mm)", "L2 (mm)", "D (mm)"],
-        [sec.t, sec.d, sec.b1, sec.b2, sec.L1, sec.L2, sec.D],
+        ["t", "d", "b1", "b2", "L1", "L2", "D"],
+        [
+            _value_with_unit(sec.t, "mm"),
+            _value_with_unit(sec.d, "mm"),
+            _value_with_unit(sec.b1, "mm"),
+            _value_with_unit(sec.b2, "mm"),
+            _value_with_unit(sec.L1, "mm"),
+            _value_with_unit(sec.L2, "mm"),
+            _value_with_unit(sec.D, "mm"),
+        ],
     ]
     story.append(_table(dims_data, [W / 7] * 7, styles, header_color=PRIMARY))
     story.append(Spacer(1, 5))
 
     props_data = [
-        ["Property", "Symbol", "Value", "Unit"],
-        ["Centroid x-bar from web centre-line", "x-bar", round(res.section.X, 3), "mm"],
-        ["Centroid y-bar from top", "y-bar", round(res.section.Y, 3), "mm"],
-        ["Moment of inertia (XX)", "Ixx", f"{res.section.Ixx:.2f}", "mm^4"],
-        ["Moment of inertia (YY)", "Iyy", f"{res.section.Iyy:.2f}", "mm^4"],
-        ["Section modulus top", "Z1xx-top", f"{res.section.Z1xx_top:.2f}", "mm^3"],
-        ["Section modulus bottom", "Z1xx-bot", f"{res.section.Z1xx_bot:.2f}", "mm^3"],
-        ["Section modulus right", "Zyy-right", f"{res.section.Zyy_right:.2f}", "mm^3"],
-        ["Cross-sectional area", "A", round(res.section.area, 3), "cm^2"],
-        ["Self-weight", "w/m", round(res.section.weight_per_m, 3), "kg/m"],
+        ["Property", "Symbol", "Value"],
+        ["Centroid x-bar from web centre-line", "x-bar", _value_with_unit(round(res.section.X, 3), "mm")],
+        ["Centroid y-bar from top", "y-bar", _value_with_unit(round(res.section.Y, 3), "mm")],
+        ["Moment of inertia (XX)", "Ixx", _value_with_unit(f"{res.section.Ixx:.2f}", "mm^4")],
+        ["Moment of inertia (YY)", "Iyy", _value_with_unit(f"{res.section.Iyy:.2f}", "mm^4")],
+        ["Section modulus top", "Z1xx-top", _value_with_unit(f"{res.section.Z1xx_top:.2f}", "mm^3")],
+        ["Section modulus bottom", "Z1xx-bot", _value_with_unit(f"{res.section.Z1xx_bot:.2f}", "mm^3")],
+        ["Section modulus right", "Zyy-right", _value_with_unit(f"{res.section.Zyy_right:.2f}", "mm^3")],
+        ["Cross-sectional area", "A", _value_with_unit(round(res.section.area, 3), "cm^2")],
+        ["Self-weight", "w/m", _value_with_unit(round(res.section.weight_per_m, 3), "kg/m")],
     ]
-    story.append(_table(props_data, [W * 0.40, W * 0.18, W * 0.24, W * 0.18], styles))
+    story.append(_table(props_data, [W * 0.44, W * 0.20, W * 0.36], styles))
 
     story += _section_head("Section Classification Checks", styles, 7)
     chk_data = [["Check", "Value", "Limit", "Status"]]
@@ -407,39 +425,39 @@ def generate_pdf_report(
     # ── Strength and serviceability ───────────────────────────────
     story += _section_head("Lateral Buckling - Permissible Bending Stress", styles, 8)
     lb_data = [
-        ["Parameter", "Value", "Unit"],
-        ["Unbraced length (L_u)", round(res.L_unbraced, 3), "m"],
-        ["Iyc = Iyy/2", round(res.Iyc, 3), "cm^4"],
-        ["Sxc = Zxx-top", round(res.Sxc, 3), "cm^3"],
-        ["lambda = L^2*Sxc / (d*Iyc)", round(res.lambda_val, 2), "-"],
-        ["Fb (computed)", round(res.Fb, 2), "N/mm^2"],
-        ["F_basic = 0.6*Fy", round(res.F_basic, 2), "N/mm^2"],
-        ["Fb (adopted, min of above)", round(res.Fb, 2), "N/mm^2"],
+        ["Parameter", "Value"],
+        ["Unbraced length (L_u)", _value_with_unit(round(res.L_unbraced, 3), "m")],
+        ["Iyc = Iyy/2", _value_with_unit(round(res.Iyc, 3), "cm^4")],
+        ["Sxc = Zxx-top", _value_with_unit(round(res.Sxc, 3), "cm^3")],
+        ["lambda = L^2*Sxc / (d*Iyc)", round(res.lambda_val, 2)],
+        ["Fb (computed)", _value_with_unit(round(res.Fb, 2), "N/mm^2")],
+        ["F_basic = 0.6*Fy", _value_with_unit(round(res.F_basic, 2), "N/mm^2")],
+        ["Fb (adopted, min of above)", _value_with_unit(round(res.Fb, 2), "N/mm^2")],
     ]
-    story.append(_table(lb_data, [W * 0.52, W * 0.28, W * 0.20], styles))
+    story.append(_table(lb_data, [W * 0.62, W * 0.38], styles))
 
     story += _section_head("Bending Stress Checks", styles, 9)
-    sc_data = [["Load case / location", "fb_actual (N/mm^2)", "Limit (N/mm^2)", "Status"]]
+    sc_data = [["Load case / location", "fb actual", "Limit", "Status"]]
     for chk in res.stress_checks:
         sc_data.append(_plain_check_row(chk))
     story.append(_table(sc_data, [W * 0.46, W * 0.20, W * 0.20, W * 0.14], styles))
 
     story += _section_head("Deflection Check", styles, 10)
-    defl_data = [["Check", "Deflection (mm)", "Limit (mm)", "Status"]]
+    defl_data = [["Check", "Deflection", "Limit", "Status"]]
     defl_data.extend([_plain_check_row(res.defl_check_c1), _plain_check_row(res.defl_check_c2)])
     story.append(_table(defl_data, [W * 0.46, W * 0.20, W * 0.20, W * 0.14], styles))
 
     story += _section_head("Purlin Overlap Check", styles, 11)
     lap_data = [
-        ["Parameter", "Value", "Unit"],
-        ["Governing UDL", round(res.w_governing, 3), "kg/m"],
-        ["Moment capacity = Zxx*Fb", round(res.M_capacity, 2), "kg*m"],
-        ["Bay spacing L", inp.bay_spacing, "m"],
-        ["Overlap length X provided", round(res.lap_used * 1000, 0), "mm"],
-        ["Moment at X (M_at_X)", round(res.M_at_lap, 2), "kg*m"],
-        ["Status", res.lap_check.status, "-"],
+        ["Parameter", "Value"],
+        ["Governing UDL", _value_with_unit(round(res.w_governing, 3), "kg/m")],
+        ["Moment capacity = Zxx*Fb", _value_with_unit(round(res.M_capacity, 2), "kg·m")],
+        ["Bay spacing L", _value_with_unit(inp.bay_spacing, "m")],
+        ["Overlap length X provided", _value_with_unit(round(res.lap_used * 1000, 0), "mm")],
+        ["Moment at X (M_at_X)", _value_with_unit(round(res.M_at_lap, 2), "kg·m")],
+        ["Status", res.lap_check.status],
     ]
-    story.append(_table(lap_data, [W * 0.52, W * 0.28, W * 0.20], styles))
+    story.append(_table(lap_data, [W * 0.62, W * 0.38], styles))
 
     # ── Final recommendation ─────────────────────────────────────
     story += _section_head("Final Recommendation", styles, 12)
