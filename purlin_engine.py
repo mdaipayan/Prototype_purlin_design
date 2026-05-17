@@ -137,96 +137,114 @@ class DesignResult:
 def compute_section(sec: ZSectionProps) -> ZSectionProps:
     """
     Compute centroid, Ixx, Iyy, section moduli for a Z-section.
-    All inputs and outputs in mm (Ixx in mm⁴, Z in mm³).
-    Area returned in cm², weight in kg/m.
+
+    The section-property model intentionally follows the legacy Excel
+    calculation used for this design workbook.  In that sheet, the web is
+    taken as the clear web depth ``d`` and the return lips are reduced by one
+    plate thickness at the bends (``L1 - t`` and ``L2 - t``).  This avoids
+    double-counting the corner material and reproduces the workbook Ixx value
+    of 7,416,273.44 mm⁴ for the default 250×2 Z-purlin.
+
+    All inputs and outputs are in mm (Ixx/Iyy in mm⁴, Z in mm³). Area is
+    returned in cm² and weight in kg/m.
     """
-    t  = sec.t
-    d  = sec.d    # clear web depth
+    t = sec.t
+    d = sec.d      # clear web depth between flange bend lines
     b1 = sec.b1
     b2 = sec.b2
     L1 = sec.L1
     L2 = sec.L2
-    D  = sec.D    # overall depth = d + 2t  (approximately)
+    D = sec.D      # overall depth used for extreme-fibre distances
 
-    # Elements (centre-line model):
-    # 1. Top flange: b1 × t, centroid y from top edge = t/2
-    # 2. Web:        (D-2t) × t, centroid y = t + (D-2t)/2
-    # 3. Bottom flange: b2 × t, centroid y = D - t/2
-    # 4. Top lip:    L1 × t,  centroid x ≈ (b1 - t/2), y = t/2
-    # 5. Bottom lip: L2 × t,  centroid x ≈ -(b2 - t/2), y = D - t/2
+    # Excel/legacy plate-line model areas.  Lips are reduced by one thickness
+    # because the bend/corner material is already represented by the flanges.
+    lip1_depth = max(L1 - t, 0.0)
+    lip2_depth = max(L2 - t, 0.0)
 
-    h = D  # overall depth
-
-    # Areas
+    A_w = t * d
     A_tf = b1 * t
     A_bf = b2 * t
-    A_w  = (h - 2*t) * t
-    A_L1 = L1 * t
-    A_L2 = L2 * t
-    A_total = A_tf + A_bf + A_w + A_L1 + A_L2
+    A_L1 = lip1_depth * t
+    A_L2 = lip2_depth * t
+    A_total = A_w + A_tf + A_bf + A_L1 + A_L2
 
-    # y-centroids from top
+    if A_total <= 0:
+        sec.X = sec.Y = sec.Ixx = sec.Iyy = 0.0
+        sec.Z1xx_top = sec.Z1xx_bot = sec.Zyy_right = sec.Zyy_left = 0.0
+        sec.area = sec.weight_per_m = 0.0
+        return sec
+
+    # y-centroids from the top outer face, matching the Excel substitutions:
+    # web: 0.5d + t; top flange: 0.5t; top lip: t + 0.5(L1 - t);
+    # bottom flange: d + 1.5t; bottom lip: d + t - 0.5(L2 - t).
+    y_w = t + d / 2
     y_tf = t / 2
-    y_bf = h - t / 2
-    y_w  = t + (h - 2*t) / 2
-    y_L1 = t / 2
-    y_L2 = h - t / 2
+    y_L1 = t + lip1_depth / 2
+    y_bf = d + 1.5 * t
+    y_L2 = d + t - lip2_depth / 2
 
-    # Centroid Y from top
-    Ybar = (A_tf*y_tf + A_bf*y_bf + A_w*y_w + A_L1*y_L1 + A_L2*y_L2) / A_total
+    Ybar = (
+        A_w * y_w + A_tf * y_tf + A_L1 * y_L1 +
+        A_bf * y_bf + A_L2 * y_L2
+    ) / A_total
 
-    # Ixx about neutral axis
-    def rect_I(b, h_r): return b * h_r**3 / 12
+    # Ixx about the horizontal neutral axis.  This is written in the same five
+    # component order as the Excel sheet: web, top flange, top lip, bottom
+    # flange, bottom lip.  Flange local Ixx is omitted because it is negligible
+    # in the source workbook; web/lip local Ixx is included.
+    I_web = t * d**3 / 12 + A_w * (y_w - Ybar) ** 2
+    I_top_flange = A_tf * (Ybar - y_tf) ** 2
+    I_top_lip = t * lip1_depth**3 / 12 + A_L1 * (Ybar - y_L1) ** 2
+    I_bottom_flange = A_bf * (y_bf - Ybar) ** 2
+    I_bottom_lip = t * lip2_depth**3 / 12 + A_L2 * (y_L2 - Ybar) ** 2
+    Ixx = I_web + I_top_flange + I_top_lip + I_bottom_flange + I_bottom_lip
 
-    Ixx = (
-        rect_I(b1, t)  + A_tf * (y_tf - Ybar)**2 +
-        rect_I(t, h-2*t) + A_w  * (y_w  - Ybar)**2 +
-        rect_I(b2, t)  + A_bf * (y_bf - Ybar)**2 +
-        rect_I(t, L1)  + A_L1 * (y_L1 - Ybar)**2 +
-        rect_I(t, L2)  + A_L2 * (y_L2 - Ybar)**2
-    )
-
-    # x-centroids (Z-section: top flange right, bottom flange left)
-    x_tf = b1 / 2          # from web centre-line
+    # x-centroids from web centre-line.  The same reduced lip areas are used so
+    # Xbar, Iyy, and weight remain consistent with the corrected Ixx model.
+    x_w = 0.0
+    x_tf = b1 / 2
     x_bf = -b2 / 2
-    x_w  = 0.0
-    x_L1 = b1 - t/2       # lip extends from end of top flange
-    x_L2 = -(b2 - t/2)
+    x_L1 = b1 - t / 2
+    x_L2 = -(b2 - t / 2)
 
-    Xbar = (A_tf*x_tf + A_bf*x_bf + A_w*x_w + A_L1*x_L1 + A_L2*x_L2) / A_total
+    Xbar = (
+        A_w * x_w + A_tf * x_tf + A_bf * x_bf +
+        A_L1 * x_L1 + A_L2 * x_L2
+    ) / A_total
 
     Iyy = (
-        rect_I(t, b1)  + A_tf * (x_tf - Xbar)**2 +
-        rect_I(t, b2)  + A_bf * (x_bf - Xbar)**2 +
-        rect_I(h-2*t, t) + A_w  * (x_w  - Xbar)**2 +
-        rect_I(t, L1)  + A_L1 * (x_L1 - Xbar)**2 +
-        rect_I(t, L2)  + A_L2 * (x_L2 - Xbar)**2
+        d * t**3 / 12 + A_w * (x_w - Xbar) ** 2 +
+        t * b1**3 / 12 + A_tf * (x_tf - Xbar) ** 2 +
+        t * b2**3 / 12 + A_bf * (x_bf - Xbar) ** 2 +
+        lip1_depth * t**3 / 12 + A_L1 * (x_L1 - Xbar) ** 2 +
+        lip2_depth * t**3 / 12 + A_L2 * (x_L2 - Xbar) ** 2
     )
 
-    Z1xx_top = Ixx / Ybar
-    Z1xx_bot = Ixx / (h - Ybar)
+    top_fibre = Ybar
+    bottom_fibre = max(D - Ybar, 0.0)
+    Z1xx_top = Ixx / top_fibre if top_fibre > 0 else 0.0
+    Z1xx_bot = Ixx / bottom_fibre if bottom_fibre > 0 else 0.0
 
-    # Zyy: distance to right-most fibre = b1 - Xbar
+    # Zyy extreme-fibre distances from Xbar.
     right_fibre = b1 - Xbar
-    left_fibre  = b2 + Xbar   # distance to left-most fibre (bottom flange side)
-    Zyy_right = Iyy / right_fibre if right_fibre > 0 else 0
-    Zyy_left  = Iyy / left_fibre  if left_fibre  > 0 else 0
+    left_fibre = b2 + Xbar
+    Zyy_right = Iyy / right_fibre if right_fibre > 0 else 0.0
+    Zyy_left = Iyy / left_fibre if left_fibre > 0 else 0.0
 
-    area_cm2     = A_total / 100        # mm² → cm²
-    weight_kg_m  = area_cm2 * 7.85 / 10  # kg/m
+    area_cm2 = A_total / 100        # mm² → cm²
+    weight_kg_m = area_cm2 * 7.85 / 10  # kg/m
 
-    sec.X           = Xbar
-    sec.Y           = Ybar
-    sec.Ixx         = Ixx
-    sec.Iyy         = Iyy
-    sec.Z1xx_top    = Z1xx_top
-    sec.Z1xx_bot    = Z1xx_bot
-    sec.Zyy_right   = Zyy_right
-    sec.Zyy_left    = Zyy_left
-    sec.area        = area_cm2
+    sec.X = Xbar
+    sec.Y = Ybar
+    sec.Ixx = Ixx
+    sec.Iyy = Iyy
+    sec.Z1xx_top = Z1xx_top
+    sec.Z1xx_bot = Z1xx_bot
+    sec.Zyy_right = Zyy_right
+    sec.Zyy_left = Zyy_left
+    sec.area = area_cm2
     sec.weight_per_m = weight_kg_m
     return sec
-
 
 # ─────────────────────────────────────────────
 # MAIN DESIGN FUNCTION
