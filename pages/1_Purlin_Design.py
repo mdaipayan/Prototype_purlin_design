@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="Purlin Design — IS 801",
     page_icon="🏗️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ── CSS overrides ───────────────────────────────────────────────
@@ -35,7 +35,7 @@ st.markdown("""
 }
 .stApp { background: linear-gradient(180deg, #F7FAFC 0%, #EEF4F9 46%, #F8FAFC 100%); color: var(--ink); }
 .block-container { padding-top: 1.7rem; padding-bottom: 3rem; max-width: 1240px; }
-[data-testid="stSidebar"] { min-width: 330px; background: linear-gradient(180deg, #F8FBFE 0%, #EEF5FB 100%); }
+[data-testid="stSidebar"] { background: linear-gradient(180deg, #F8FBFE 0%, #EEF5FB 100%); }
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #475569; }
 [data-testid="stMetric"] {
     background: rgba(255,255,255,0.86);
@@ -122,6 +122,17 @@ button[kind="secondary"] { border-radius: 999px; }
 }
 .panel-title { margin: 0 0 4px; color: var(--navy); font-size: 1.05rem; font-weight: 850; letter-spacing: -0.018em; }
 .panel-subtitle { margin: 0 0 16px; color: var(--muted); font-size: 0.88rem; }
+.input-panel-intro {
+    border: 1px solid #DCE6F1;
+    border-radius: 24px;
+    padding: 20px 22px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(239,246,255,0.88));
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+    margin: 4px 0 14px;
+}
+.input-panel-intro .input-eyebrow { color: #1D4ED8; font-size: 0.74rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
+.input-panel-intro h2 { margin: 6px 0 6px; color: var(--navy); letter-spacing: -0.035em; }
+.input-panel-intro p { margin: 0; color: var(--muted); line-height: 1.6; max-width: 900px; }
 
 /* Verdict banner */
 .verdict-pass, .verdict-fail {
@@ -420,43 +431,72 @@ def purlin_formula_steps(inp: PurlinInputs, sec: ZSectionProps, res) -> list[dic
 
 
 # ══════════════════════════════════════════════════════════════════
-# SIDEBAR — ALL INPUTS
+# SIDEBAR — BRAND AND SECURITY CONTROLS
 # ══════════════════════════════════════════════════════════════════
 
 with st.sidebar:
     render_brand_block("Purlin Design", "IS 801-1975 / IS 875 (Part 3)-1987")
     render_security_controls()
-    st.divider()
+    st.caption("Inputs are now arranged in the main workspace for wider, easier review.")
 
-    presets = {
-        "AIR concourse default": {
-            "project_name": "AIR Concourse Building", "bay_type": "End Bay",
-            "bay_spacing": 9.347, "purlin_spacing": 1.5, "slope_x": 10.0, "slope_y": 1.0,
-            "num_sag": 4, "dl": 15.0, "ll": 75.0, "cl": 75.0, "wl": 130.0,
-            "cp1": 1.4, "fy": 345.0, "E_mod": 200000.0,
-            "t_sec": 2.0, "d_sec": 246.0, "D_sec": 250.0,
-            "b1_sec": 64.0, "b2_sec": 66.0, "L1_sec": 20.0, "L2_sec": 20.0,
-            "lap_mm": 0,
-        },
-        "Light roof review": {
-            "project_name": "Light Roof Review", "bay_type": "Mid Bay",
-            "bay_spacing": 7.5, "purlin_spacing": 1.4, "slope_x": 10.0, "slope_y": 1.0,
-            "num_sag": 3, "dl": 12.0, "ll": 50.0, "cl": 25.0, "wl": 110.0,
-            "cp1": 1.2, "fy": 345.0, "E_mod": 200000.0,
-            "t_sec": 1.6, "d_sec": 246.0, "D_sec": 250.0,
-            "b1_sec": 60.0, "b2_sec": 62.0, "L1_sec": 16.0, "L2_sec": 16.0,
-            "lap_mm": 0,
-        },
-        "High wind trial": {
-            "project_name": "High Wind Trial", "bay_type": "End Bay",
-            "bay_spacing": 9.347, "purlin_spacing": 1.5, "slope_x": 10.0, "slope_y": 1.0,
-            "num_sag": 5, "dl": 15.0, "ll": 75.0, "cl": 75.0, "wl": 165.0,
-            "cp1": 1.4, "fy": 345.0, "E_mod": 200000.0,
-            "t_sec": 2.5, "d_sec": 245.0, "D_sec": 250.0,
-            "b1_sec": 64.0, "b2_sec": 66.0, "L1_sec": 20.0, "L2_sec": 20.0,
-            "lap_mm": 0,
-        },
-    }
+
+# ══════════════════════════════════════════════════════════════════
+# MAIN PAGE
+# ══════════════════════════════════════════════════════════════════
+
+presets = {
+    "AIR concourse default": {
+        "project_name": "AIR Concourse Building", "bay_type": "End Bay",
+        "bay_spacing": 9.347, "purlin_spacing": 1.5, "slope_x": 10.0, "slope_y": 1.0,
+        "num_sag": 4, "dl": 15.0, "ll": 75.0, "cl": 75.0, "wl": 130.0,
+        "cp1": 1.4, "fy": 345.0, "E_mod": 200000.0,
+        "t_sec": 2.0, "d_sec": 246.0, "D_sec": 250.0,
+        "b1_sec": 64.0, "b2_sec": 66.0, "L1_sec": 20.0, "L2_sec": 20.0,
+        "lap_mm": 0,
+    },
+    "Light roof review": {
+        "project_name": "Light Roof Review", "bay_type": "Mid Bay",
+        "bay_spacing": 7.5, "purlin_spacing": 1.4, "slope_x": 10.0, "slope_y": 1.0,
+        "num_sag": 3, "dl": 12.0, "ll": 50.0, "cl": 25.0, "wl": 110.0,
+        "cp1": 1.2, "fy": 345.0, "E_mod": 200000.0,
+        "t_sec": 1.6, "d_sec": 246.0, "D_sec": 250.0,
+        "b1_sec": 60.0, "b2_sec": 62.0, "L1_sec": 16.0, "L2_sec": 16.0,
+        "lap_mm": 0,
+    },
+    "High wind trial": {
+        "project_name": "High Wind Trial", "bay_type": "End Bay",
+        "bay_spacing": 9.347, "purlin_spacing": 1.5, "slope_x": 10.0, "slope_y": 1.0,
+        "num_sag": 5, "dl": 15.0, "ll": 75.0, "cl": 75.0, "wl": 165.0,
+        "cp1": 1.4, "fy": 345.0, "E_mod": 200000.0,
+        "t_sec": 2.5, "d_sec": 245.0, "D_sec": 250.0,
+        "b1_sec": 64.0, "b2_sec": 66.0, "L1_sec": 20.0, "L2_sec": 20.0,
+        "lap_mm": 0,
+    },
+}
+
+st.markdown(
+    """
+<div class="page-hero">
+  <span class="eyebrow">Cold-formed steel design</span>
+  <h1>Purlin Design — IS 801-1975</h1>
+  <p>Professional Z-section calculation dashboard with main-panel inputs, visual utilization summaries, section-property graphics, clause references, and an auditable PDF report.</p>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+<div class="input-panel-intro">
+  <div class="input-eyebrow">Main input workspace</div>
+  <h2>Design input panel</h2>
+  <p>Inputs are grouped across three review columns so project data, loads, material properties, section dimensions, and lap settings can be checked without working inside the side panel.</p>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+
+with st.container(border=True):
     preset_name = st.selectbox(
         "Design starting preset",
         list(presets),
@@ -465,54 +505,44 @@ with st.sidebar:
     defaults = presets[preset_name]
     key_prefix = preset_name.lower().replace(" ", "_")
 
-    # Project info
-    st.markdown('<div class="section-header">Project</div>', unsafe_allow_html=True)
-    project_name = st.text_input("Project name", value=defaults["project_name"], key=f"project_{key_prefix}")
-    bay_type = st.selectbox(
-        "Bay type",
-        ["End Bay", "Mid Bay"],
-        index=["End Bay", "Mid Bay"].index(defaults["bay_type"]),
-        help="End bay uses higher continuous-purlin moment coefficients than mid bay.",
-        key=f"bay_type_{key_prefix}",
-    )
+    col1, col2, col3 = st.columns(3, gap="large")
 
-    st.markdown('<div class="section-header">Geometry</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    bay_spacing = c1.number_input("Bay spacing L (m)", value=defaults["bay_spacing"], min_value=0.1, step=0.001, format="%.3f", help="Effective purlin span between frames.", key=f"bay_spacing_{key_prefix}")
-    purlin_spacing = c2.number_input("Purlin spacing Ps (m)", value=defaults["purlin_spacing"], min_value=0.1, step=0.1, help="Tributary roof width supported by each purlin.", key=f"purlin_spacing_{key_prefix}")
-    c1, c2 = st.columns(2)
-    slope_x = c1.number_input("Slope X", value=defaults["slope_x"], min_value=0.1, step=0.5, key=f"slope_x_{key_prefix}")
-    slope_y = c2.number_input("Slope Y", value=defaults["slope_y"], min_value=0.0, step=0.1, key=f"slope_y_{key_prefix}")
-    num_sag = st.number_input("Number of sag bars", value=defaults["num_sag"], min_value=1, max_value=10, step=1, help="Used to determine unbraced length Lu = L/(n+1).", key=f"num_sag_{key_prefix}")
+    with col1:
+        st.markdown('<div class="section-header">Project + Geometry</div>', unsafe_allow_html=True)
+        project_name = st.text_input("Project name", value=defaults["project_name"], key=f"project_{key_prefix}")
+        bay_type = st.selectbox(
+            "Bay type",
+            ["End Bay", "Mid Bay"],
+            index=["End Bay", "Mid Bay"].index(defaults["bay_type"]),
+            help="End bay uses higher continuous-purlin moment coefficients than mid bay.",
+            key=f"bay_type_{key_prefix}",
+        )
+        bay_spacing = st.number_input("Bay spacing L (m)", value=defaults["bay_spacing"], min_value=0.1, step=0.001, format="%.3f", help="Effective purlin span between frames.", key=f"bay_spacing_{key_prefix}")
+        purlin_spacing = st.number_input("Purlin spacing Ps (m)", value=defaults["purlin_spacing"], min_value=0.1, step=0.1, help="Tributary roof width supported by each purlin.", key=f"purlin_spacing_{key_prefix}")
+        slope_x = st.number_input("Slope X", value=defaults["slope_x"], min_value=0.1, step=0.5, key=f"slope_x_{key_prefix}")
+        slope_y = st.number_input("Slope Y", value=defaults["slope_y"], min_value=0.0, step=0.1, key=f"slope_y_{key_prefix}")
+        num_sag = st.number_input("Number of sag bars", value=defaults["num_sag"], min_value=1, max_value=10, step=1, help="Used to determine unbraced length Lu = L/(n+1).", key=f"num_sag_{key_prefix}")
 
-    st.markdown('<div class="section-header">Loads (kg/m²)</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    dl = c1.number_input("Dead load DL", value=defaults["dl"], min_value=0.0, step=1.0, key=f"dl_{key_prefix}")
-    ll = c2.number_input("Live load LL", value=defaults["ll"], min_value=0.0, step=1.0, key=f"ll_{key_prefix}")
-    c1, c2 = st.columns(2)
-    cl = c1.number_input("Collateral CL", value=defaults["cl"], min_value=0.0, step=1.0, key=f"cl_{key_prefix}")
-    wl = c2.number_input("Wind load WL", value=defaults["wl"], min_value=0.0, step=1.0, key=f"wl_{key_prefix}")
-    cp1 = st.number_input("Wind coeff Cp1 (IS 875 Table 5)", value=defaults["cp1"], min_value=0.0, step=0.05, help="External/internal pressure coefficient used in wind uplift combination.", key=f"cp1_{key_prefix}")
+    with col2:
+        st.markdown('<div class="section-header">Loads + Material</div>', unsafe_allow_html=True)
+        dl = st.number_input("Dead load DL (kg/m²)", value=defaults["dl"], min_value=0.0, step=1.0, key=f"dl_{key_prefix}")
+        ll = st.number_input("Live load LL (kg/m²)", value=defaults["ll"], min_value=0.0, step=1.0, key=f"ll_{key_prefix}")
+        cl = st.number_input("Collateral CL (kg/m²)", value=defaults["cl"], min_value=0.0, step=1.0, key=f"cl_{key_prefix}")
+        wl = st.number_input("Wind load WL (kg/m²)", value=defaults["wl"], min_value=0.0, step=1.0, key=f"wl_{key_prefix}")
+        cp1 = st.number_input("Wind coeff Cp1 (IS 875 Table 5)", value=defaults["cp1"], min_value=0.0, step=0.05, help="External/internal pressure coefficient used in wind uplift combination.", key=f"cp1_{key_prefix}")
+        fy = st.number_input("Fy (N/mm²)", value=defaults["fy"], min_value=1.0, step=5.0, key=f"fy_{key_prefix}")
+        E_mod = st.number_input("E (N/mm²)", value=defaults["E_mod"], min_value=1.0, step=1000.0, format="%.0f", key=f"E_mod_{key_prefix}")
 
-    st.markdown('<div class="section-header">Material</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
-    fy = c1.number_input("Fy (N/mm²)", value=defaults["fy"], min_value=1.0, step=5.0, key=f"fy_{key_prefix}")
-    E_mod = c2.number_input("E (N/mm²)", value=defaults["E_mod"], min_value=1.0, step=1000.0, format="%.0f", key=f"E_mod_{key_prefix}")
-
-    st.markdown('<div class="section-header">Z-Section Dimensions (mm)</div>', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    t_sec = c1.number_input("t", value=defaults["t_sec"], min_value=0.1, step=0.5, format="%.1f", key=f"t_sec_{key_prefix}")
-    d_sec = c2.number_input("d", value=defaults["d_sec"], min_value=1.0, step=2.0, format="%.1f", key=f"d_sec_{key_prefix}")
-    D_sec = c3.number_input("D (overall)", value=defaults["D_sec"], min_value=1.0, step=2.0, format="%.1f", key=f"D_sec_{key_prefix}")
-    c1, c2 = st.columns(2)
-    b1_sec = c1.number_input("b1 (top flange)", value=defaults["b1_sec"], min_value=1.0, step=1.0, key=f"b1_sec_{key_prefix}")
-    b2_sec = c2.number_input("b2 (bot flange)", value=defaults["b2_sec"], min_value=1.0, step=1.0, key=f"b2_sec_{key_prefix}")
-    c1, c2 = st.columns(2)
-    L1_sec = c1.number_input("L1 (top lip)", value=defaults["L1_sec"], min_value=0.0, step=1.0, key=f"L1_sec_{key_prefix}")
-    L2_sec = c2.number_input("L2 (bot lip)", value=defaults["L2_sec"], min_value=0.0, step=1.0, key=f"L2_sec_{key_prefix}")
-
-    st.markdown('<div class="section-header">Overlap</div>', unsafe_allow_html=True)
-    lap_mm = st.number_input("Lap length (mm) — 0 = auto", value=defaults["lap_mm"], min_value=0, step=25, help="Use 0 to let the app search for a satisfactory lap length.", key=f"lap_mm_{key_prefix}")
+    with col3:
+        st.markdown('<div class="section-header">Z-Section + Overlap</div>', unsafe_allow_html=True)
+        t_sec = st.number_input("t (mm)", value=defaults["t_sec"], min_value=0.1, step=0.5, format="%.1f", key=f"t_sec_{key_prefix}")
+        d_sec = st.number_input("d (mm)", value=defaults["d_sec"], min_value=1.0, step=2.0, format="%.1f", key=f"d_sec_{key_prefix}")
+        D_sec = st.number_input("D overall (mm)", value=defaults["D_sec"], min_value=1.0, step=2.0, format="%.1f", key=f"D_sec_{key_prefix}")
+        b1_sec = st.number_input("b1 top flange (mm)", value=defaults["b1_sec"], min_value=1.0, step=1.0, key=f"b1_sec_{key_prefix}")
+        b2_sec = st.number_input("b2 bottom flange (mm)", value=defaults["b2_sec"], min_value=1.0, step=1.0, key=f"b2_sec_{key_prefix}")
+        L1_sec = st.number_input("L1 top lip (mm)", value=defaults["L1_sec"], min_value=0.0, step=1.0, key=f"L1_sec_{key_prefix}")
+        L2_sec = st.number_input("L2 bottom lip (mm)", value=defaults["L2_sec"], min_value=0.0, step=1.0, key=f"L2_sec_{key_prefix}")
+        lap_mm = st.number_input("Lap length (mm) — 0 = auto", value=defaults["lap_mm"], min_value=0, step=25, help="Use 0 to let the app search for a satisfactory lap length.", key=f"lap_mm_{key_prefix}")
 
     if D_sec < d_sec:
         st.warning("Overall depth D should be greater than or equal to clear web depth d.", icon="⚠️")
@@ -521,21 +551,14 @@ with st.sidebar:
 
     run_btn = st.button("▶  Run Design", type="primary", use_container_width=True)
 
-
-# ══════════════════════════════════════════════════════════════════
-# MAIN PAGE
-# ══════════════════════════════════════════════════════════════════
-
 st.markdown(
     f"""
-<div class="page-hero">
-  <span class="eyebrow">Cold-formed steel design</span>
-  <h1>Purlin Design — IS 801-1975</h1>
-  <p>Professional Z-section calculation dashboard with live inputs, visual utilization summaries, section-property graphics, clause references, and an auditable PDF report.</p>
+<div class="panel">
+  <div class="panel-title">Selected design context</div>
   <div class="hero-meta">
-    <span class="hero-chip">Project: <b>{html.escape(project_name)}</b></span>
-    <span class="hero-chip">Bay type: <b>{html.escape(bay_type)}</b></span>
-    <span class="hero-chip">Section: <b>Z-{D_sec:g} × {t_sec:g} mm</b></span>
+    <span class="hero-chip" style="color:#0B1F3A;border-color:#D8E2EF;background:#F8FAFC;">Project: <b>{html.escape(project_name)}</b></span>
+    <span class="hero-chip" style="color:#0B1F3A;border-color:#D8E2EF;background:#F8FAFC;">Bay type: <b>{html.escape(bay_type)}</b></span>
+    <span class="hero-chip" style="color:#0B1F3A;border-color:#D8E2EF;background:#F8FAFC;">Section: <b>Z-{D_sec:g} × {t_sec:g} mm</b></span>
   </div>
 </div>
 """,
@@ -547,7 +570,7 @@ if not run_btn:
         """
 <div class="panel">
   <div class="panel-title">Ready for design review</div>
-  <div class="panel-subtitle">Configure the engineering inputs in the sidebar, then run the calculation package.</div>
+  <div class="panel-subtitle">Review the engineering inputs above, then run the calculation package.</div>
   <div class="kpi-grid">
     <div class="kpi-card"><div class="kpi-label">Workflow</div><div class="kpi-value">13 steps</div><div class="kpi-note">Clause-led checks</div></div>
     <div class="kpi-card"><div class="kpi-label">Outputs</div><div class="kpi-value">PDF</div><div class="kpi-note">Formal report</div></div>
