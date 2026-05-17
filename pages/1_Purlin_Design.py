@@ -778,13 +778,14 @@ s = res.section
 
 with col_a:
     props = {
-        "Property": ["Ixx", "Iyy", "Z1xx-top", "Z1xx-bot", "Zyy-right"],
+        "Property": ["Ixx", "Iyy", "Z1xx-top", "Z1xx-bot", "Zyy-right", "Zyy-left"],
         "Value": [
             f"{s.Ixx/1e4:.2f} cm⁴",
             f"{s.Iyy/1e4:.2f} cm⁴",
             f"{s.Z1xx_top/1e3:.2f} cm³",
             f"{s.Z1xx_bot/1e3:.2f} cm³",
             f"{s.Zyy_right/1e3:.2f} cm³",
+            f"{s.Zyy_left/1e3:.2f} cm³",
         ],
     }
     st.dataframe(pd.DataFrame(props), use_container_width=True, hide_index=True)

@@ -408,6 +408,7 @@ def generate_pdf_report(
         ["Section modulus top", "Z1xx-top", _value_with_unit(f"{res.section.Z1xx_top:.2f}", "mm^3")],
         ["Section modulus bottom", "Z1xx-bot", _value_with_unit(f"{res.section.Z1xx_bot:.2f}", "mm^3")],
         ["Section modulus right", "Zyy-right", _value_with_unit(f"{res.section.Zyy_right:.2f}", "mm^3")],
+        ["Section modulus left", "Zyy-left", _value_with_unit(f"{res.section.Zyy_left:.2f}", "mm^3")],
         ["Cross-sectional area", "A", _value_with_unit(round(res.section.area, 3), "cm^2")],
         ["Self-weight", "w/m", _value_with_unit(round(res.section.weight_per_m, 3), "kg/m")],
     ]
