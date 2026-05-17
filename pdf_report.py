@@ -14,6 +14,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
 )
+from reportlab.graphics.shapes import Circle, Drawing, Line, Path, Rect, String
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
@@ -201,6 +202,128 @@ def _plain_check_row(chk: CheckResult):
     ]
 
 
+
+def _line_arrow(drawing, x1, y1, x2, y2, color=ACCENT, width=1.0, head=4):
+    """Draw a compact drafting arrow for the structural arrangement sketch."""
+    drawing.add(Line(x1, y1, x2, y2, strokeColor=color, strokeWidth=width))
+    if y2 < y1:
+        drawing.add(Line(x2, y2, x2 - head / 2, y2 + head, strokeColor=color, strokeWidth=width))
+        drawing.add(Line(x2, y2, x2 + head / 2, y2 + head, strokeColor=color, strokeWidth=width))
+    elif y2 > y1:
+        drawing.add(Line(x2, y2, x2 - head / 2, y2 - head, strokeColor=color, strokeWidth=width))
+        drawing.add(Line(x2, y2, x2 + head / 2, y2 - head, strokeColor=color, strokeWidth=width))
+    elif x2 > x1:
+        drawing.add(Line(x2, y2, x2 - head, y2 - head / 2, strokeColor=color, strokeWidth=width))
+        drawing.add(Line(x2, y2, x2 - head, y2 + head / 2, strokeColor=color, strokeWidth=width))
+    else:
+        drawing.add(Line(x2, y2, x2 + head, y2 - head / 2, strokeColor=color, strokeWidth=width))
+        drawing.add(Line(x2, y2, x2 + head, y2 + head / 2, strokeColor=color, strokeWidth=width))
+
+
+def _structural_drawing(inp: PurlinInputs, sec: ZSectionProps, res: DesignResult, W):
+    """Create a professional purlin arrangement and Z-section drawing for the PDF."""
+    H = 104 * mm
+    d = Drawing(W, H)
+
+    # Sheet border and title strip.
+    d.add(Rect(0, 0, W, H, strokeColor=GREY_LINE, strokeWidth=0.8, fillColor=WHITE))
+    d.add(Rect(0, H - 13 * mm, W, 13 * mm, strokeColor=NAVY, strokeWidth=0, fillColor=NAVY))
+    d.add(String(8 * mm, H - 8.5 * mm, "STRUCTURAL ARRANGEMENT - PURLIN MEMBER", fontName="Helvetica-Bold", fontSize=8.5, fillColor=WHITE))
+    d.add(String(W - 58 * mm, H - 8.5 * mm, f"Z-{int(sec.D)} x {sec.t:g} mm", fontName="Helvetica-Bold", fontSize=8, fillColor=colors.HexColor("#D9E7F7")))
+
+    # Elevation / roof line panel.
+    panel_y = 10 * mm
+    panel_h = 74 * mm
+    left_w = W * 0.62
+    d.add(Rect(6 * mm, panel_y, left_w, panel_h, strokeColor=GREY_LINE, strokeWidth=0.55, fillColor=colors.HexColor("#FBFCFE")))
+    d.add(String(10 * mm, panel_y + panel_h - 7 * mm, "PURLIN ELEVATION / BAY ARRANGEMENT", fontName="Helvetica-Bold", fontSize=7.2, fillColor=NAVY))
+
+    x0 = 18 * mm
+    x1 = 6 * mm + left_w - 14 * mm
+    y0 = panel_y + 24 * mm
+    rise = min(max((inp.slope_y / max(inp.slope_x, 0.1)) * (x1 - x0), 4 * mm), 19 * mm)
+    y1 = y0 + rise
+
+    # Supporting frames.
+    for x, y_top in ((x0, y0), (x1, y1)):
+        d.add(Line(x, panel_y + 9 * mm, x, y_top, strokeColor=PRIMARY, strokeWidth=2.0))
+        d.add(Line(x - 5 * mm, panel_y + 9 * mm, x + 5 * mm, panel_y + 9 * mm, strokeColor=PRIMARY, strokeWidth=1.2))
+        d.add(Line(x - 3 * mm, panel_y + 5 * mm, x + 3 * mm, panel_y + 9 * mm, strokeColor=GREY_LINE, strokeWidth=0.7))
+        d.add(Line(x + 1 * mm, panel_y + 5 * mm, x + 7 * mm, panel_y + 9 * mm, strokeColor=GREY_LINE, strokeWidth=0.7))
+
+    # Main purlin line and lap zone.
+    d.add(Line(x0, y0, x1, y1, strokeColor=ACCENT, strokeWidth=2.4))
+    lap_len = min(max(res.lap_used / max(inp.bay_spacing, 0.1), 0.08), 0.32) * (x1 - x0)
+    d.add(Line(x1 - lap_len, y1 - rise * lap_len / (x1 - x0), x1, y1, strokeColor=GOLD, strokeWidth=4.0))
+    d.add(String(x1 - lap_len - 8 * mm, y1 + 5 * mm, f"lap {int(res.lap_used * 1000)} mm", fontName="Helvetica-Bold", fontSize=6.6, fillColor=GOLD))
+
+    # Sag bars/intermediate restraint points.
+    n_spaces = inp.num_sag_bars + 1
+    for i in range(1, n_spaces):
+        x = x0 + (x1 - x0) * i / n_spaces
+        y = y0 + (y1 - y0) * i / n_spaces
+        d.add(Circle(x, y, 2.0, strokeColor=OK_GREEN, strokeWidth=0.8, fillColor=OK_BG))
+        d.add(Line(x, y - 8 * mm, x, y + 8 * mm, strokeColor=OK_GREEN, strokeWidth=0.65, strokeDashArray=[2, 2]))
+    d.add(String(x0 + 4 * mm, panel_y + 14 * mm, f"{inp.num_sag_bars} sag bars / restraints", fontSize=6.4, fillColor=MUTED))
+
+    # Distributed load arrows.
+    for i in range(6):
+        x = x0 + (x1 - x0) * (i + 0.5) / 6
+        y = y0 + (y1 - y0) * (i + 0.5) / 6
+        _line_arrow(d, x, y + 15 * mm, x, y + 4 * mm, ACCENT, 0.75, 3)
+    d.add(String(x0 + 22 * mm, y1 + 22 * mm, f"governing UDL = {res.w_governing:.2f} kg/m", fontName="Helvetica-Bold", fontSize=6.7, fillColor=ACCENT))
+
+    # Dimension line for span.
+    dim_y = panel_y + 4 * mm
+    d.add(Line(x0, dim_y, x1, dim_y, strokeColor=TEXT, strokeWidth=0.65))
+    _line_arrow(d, x0 + 12 * mm, dim_y, x0, dim_y, TEXT, 0.65, 3)
+    _line_arrow(d, x1 - 12 * mm, dim_y, x1, dim_y, TEXT, 0.65, 3)
+    d.add(String((x0 + x1) / 2 - 15 * mm, dim_y + 3 * mm, f"Bay spacing L = {inp.bay_spacing:g} m", fontName="Helvetica-Bold", fontSize=6.6, fillColor=TEXT))
+
+    # Z-section cross-section panel.
+    right_x = 6 * mm + left_w + 6 * mm
+    right_w = W - right_x - 6 * mm
+    d.add(Rect(right_x, panel_y, right_w, panel_h, strokeColor=GREY_LINE, strokeWidth=0.55, fillColor=colors.HexColor("#FBFCFE")))
+    d.add(String(right_x + 4 * mm, panel_y + panel_h - 7 * mm, "Z-SECTION ORIENTATION", fontName="Helvetica-Bold", fontSize=7.2, fillColor=NAVY))
+
+    cx = right_x + right_w * 0.50
+    top_y = panel_y + panel_h - 22 * mm
+    depth = 42 * mm
+    top_len = min(max(sec.b1 / max(sec.D, 1) * depth, 13 * mm), 25 * mm)
+    bot_len = min(max(sec.b2 / max(sec.D, 1) * depth, 13 * mm), 25 * mm)
+    lip1 = min(max(sec.L1 / max(sec.D, 1) * depth, 4 * mm), 9 * mm)
+    lip2 = min(max(sec.L2 / max(sec.D, 1) * depth, 4 * mm), 9 * mm)
+
+    z = Path(strokeColor=PRIMARY, strokeWidth=4.0, fillColor=None)
+    z.moveTo(cx, top_y)
+    z.lineTo(cx + top_len, top_y)
+    z.lineTo(cx + top_len, top_y - lip1)
+    z.moveTo(cx, top_y)
+    z.lineTo(cx, top_y - depth)
+    z.lineTo(cx - bot_len, top_y - depth)
+    z.lineTo(cx - bot_len, top_y - depth + lip2)
+    d.add(z)
+
+    # Centroid axes and labels.
+    centroid_x = cx + res.section.X / max(sec.D, 1) * depth
+    centroid_y = top_y - res.section.Y / max(sec.D, 1) * depth
+    d.add(Line(right_x + 8 * mm, centroid_y, right_x + right_w - 8 * mm, centroid_y, strokeColor=GREY_LINE, strokeWidth=0.6, strokeDashArray=[2, 2]))
+    d.add(Line(centroid_x, panel_y + 15 * mm, centroid_x, panel_y + panel_h - 17 * mm, strokeColor=GREY_LINE, strokeWidth=0.6, strokeDashArray=[2, 2]))
+    d.add(Circle(centroid_x, centroid_y, 2.4, strokeColor=GOLD, strokeWidth=0.7, fillColor=GOLD))
+    d.add(String(right_x + 5 * mm, panel_y + 18 * mm, f"x-bar={res.section.X:.2f} mm", fontSize=6.2, fillColor=MUTED))
+    d.add(String(right_x + 5 * mm, panel_y + 11 * mm, f"y-bar={res.section.Y:.2f} mm", fontSize=6.2, fillColor=MUTED))
+    d.add(String(right_x + right_w - 34 * mm, panel_y + 18 * mm, f"Zyy R={res.section.Zyy_right:.2f} mm^3", fontSize=6.0, fillColor=MUTED))
+    d.add(String(right_x + right_w - 34 * mm, panel_y + 11 * mm, f"Zyy L={res.section.Zyy_left:.2f} mm^3", fontSize=6.0, fillColor=MUTED))
+
+    # Depth dimension.
+    dim_x = right_x + right_w - 8 * mm
+    d.add(Line(dim_x, top_y, dim_x, top_y - depth, strokeColor=TEXT, strokeWidth=0.6))
+    _line_arrow(d, dim_x, top_y - 9 * mm, dim_x, top_y, TEXT, 0.6, 3)
+    _line_arrow(d, dim_x, top_y - depth + 9 * mm, dim_x, top_y - depth, TEXT, 0.6, 3)
+    d.add(String(dim_x - 12 * mm, top_y - depth / 2, f"D={sec.D:g} mm", fontSize=6.3, fillColor=TEXT))
+
+    return d
+
 def _design_step_rows(inp: PurlinInputs, sec: ZSectionProps, res: DesignResult):
     """Compact clause-referenced calculation steps for the PDF report."""
     span_coeff = 0.0772 if inp.bay_type == "End Bay" else 0.0364
@@ -355,8 +478,13 @@ def generate_pdf_report(
     ]
     story.append(_table(inp_data, [W * 0.44, W * 0.20, W * 0.36], styles))
 
+    # ── Structural arrangement drawing ────────────────────────────
+    story += _section_head("Structural Arrangement Drawing", styles, 3)
+    story.append(_structural_drawing(inp, sec, res, W))
+    story.append(Spacer(1, 6))
+
     # ── Loads and moments ─────────────────────────────────────────
-    story += _section_head("Load Calculations", styles, 3)
+    story += _section_head("Load Calculations", styles, 4)
     load_data = [
         ["Item", "Formula", "Value"],
         ["Kx (along-slope factor)", "X / sqrt(X^2+Y^2)", round(res.Kx, 6)],
@@ -366,7 +494,7 @@ def generate_pdf_report(
     ]
     story.append(_table(load_data, [W * 0.38, W * 0.38, W * 0.24], styles))
 
-    story += _section_head("Design Bending Moments", styles, 4)
+    story += _section_head("Design Bending Moments", styles, 5)
     mom_data = [
         ["Load case", "Location", "Coefficient", "Moment"],
         ["DL+LL+CL", "Midspan", f"0.{'0772' if inp.bay_type == 'End Bay' else '0364'}", _value_with_unit(round(res.M_span_c1, 2), "kg·m")],
@@ -377,13 +505,13 @@ def generate_pdf_report(
     story.append(_table(mom_data, [W * 0.25, W * 0.25, W * 0.22, W * 0.28], styles))
 
     # ── Clause-referenced summary ─────────────────────────────────
-    story += _section_head("Clause-Referenced Design Step Summary", styles, 5)
+    story += _section_head("Clause-Referenced Design Step Summary", styles, 6)
     step_data = [["Step", "Design check", "IS reference", "Expression / value"]]
     step_data.extend(_design_step_rows(inp, sec, res))
     story.append(_table(step_data, [W * 0.08, W * 0.22, W * 0.24, W * 0.46], styles, header_color=NAVY))
 
     # ── Section properties and checks ─────────────────────────────
-    story += _section_head("Z-Section Properties", styles, 6)
+    story += _section_head("Z-Section Properties", styles, 7)
     dims_data = [
         ["t", "d", "b1", "b2", "L1", "L2", "D"],
         [
@@ -408,12 +536,13 @@ def generate_pdf_report(
         ["Section modulus top", "Z1xx-top", _value_with_unit(f"{res.section.Z1xx_top:.2f}", "mm^3")],
         ["Section modulus bottom", "Z1xx-bot", _value_with_unit(f"{res.section.Z1xx_bot:.2f}", "mm^3")],
         ["Section modulus right", "Zyy-right", _value_with_unit(f"{res.section.Zyy_right:.2f}", "mm^3")],
+        ["Section modulus left", "Zyy-left", _value_with_unit(f"{res.section.Zyy_left:.2f}", "mm^3")],
         ["Cross-sectional area", "A", _value_with_unit(round(res.section.area, 3), "cm^2")],
         ["Self-weight", "w/m", _value_with_unit(round(res.section.weight_per_m, 3), "kg/m")],
     ]
     story.append(_table(props_data, [W * 0.44, W * 0.20, W * 0.36], styles))
 
-    story += _section_head("Section Classification Checks", styles, 7)
+    story += _section_head("Section Classification Checks", styles, 8)
     chk_data = [["Check", "Value", "Limit", "Status"]]
     chk_data.extend([
         _plain_check_row(res.depth_check_150t),
@@ -423,7 +552,7 @@ def generate_pdf_report(
     story.append(_table(chk_data, [W * 0.46, W * 0.18, W * 0.22, W * 0.14], styles))
 
     # ── Strength and serviceability ───────────────────────────────
-    story += _section_head("Lateral Buckling - Permissible Bending Stress", styles, 8)
+    story += _section_head("Lateral Buckling - Permissible Bending Stress", styles, 9)
     lb_data = [
         ["Parameter", "Value"],
         ["Unbraced length (L_u)", _value_with_unit(round(res.L_unbraced, 3), "m")],
@@ -436,18 +565,18 @@ def generate_pdf_report(
     ]
     story.append(_table(lb_data, [W * 0.62, W * 0.38], styles))
 
-    story += _section_head("Bending Stress Checks", styles, 9)
+    story += _section_head("Bending Stress Checks", styles, 10)
     sc_data = [["Load case / location", "fb actual", "Limit", "Status"]]
     for chk in res.stress_checks:
         sc_data.append(_plain_check_row(chk))
     story.append(_table(sc_data, [W * 0.46, W * 0.20, W * 0.20, W * 0.14], styles))
 
-    story += _section_head("Deflection Check", styles, 10)
+    story += _section_head("Deflection Check", styles, 11)
     defl_data = [["Check", "Deflection", "Limit", "Status"]]
     defl_data.extend([_plain_check_row(res.defl_check_c1), _plain_check_row(res.defl_check_c2)])
     story.append(_table(defl_data, [W * 0.46, W * 0.20, W * 0.20, W * 0.14], styles))
 
-    story += _section_head("Purlin Overlap Check", styles, 11)
+    story += _section_head("Purlin Overlap Check", styles, 12)
     lap_data = [
         ["Parameter", "Value"],
         ["Governing UDL", _value_with_unit(round(res.w_governing, 3), "kg/m")],
@@ -460,7 +589,7 @@ def generate_pdf_report(
     story.append(_table(lap_data, [W * 0.62, W * 0.38], styles))
 
     # ── Final recommendation ─────────────────────────────────────
-    story += _section_head("Final Recommendation", styles, 12)
+    story += _section_head("Final Recommendation", styles, 13)
     verdict_color = OK_GREEN if res.passed else FAIL_RED
     verdict_bg = OK_BG if res.passed else FAIL_BG
     verdict_text = "SECTION ADOPTED - ALL CHECKS SATISFIED" if res.passed else "SECTION NOT ADEQUATE - REVISE"
