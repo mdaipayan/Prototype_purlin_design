@@ -54,6 +54,16 @@ class TestSectionProperties:
         s = compute_section(mid_section)
         assert s.Ixx > 0
 
+    def test_default_Ixx_matches_excel_workbook(self, mid_section):
+        s = compute_section(mid_section)
+        # Legacy Excel sheet cell F45: 7,416,273.44 mm⁴ = 741.63 cm⁴
+        assert s.Ixx == pytest.approx(7_416_273.44, abs=0.01)
+        assert s.Ixx / 10_000 == pytest.approx(741.63, abs=0.01)
+
+    def test_default_centroid_matches_excel_workbook(self, mid_section):
+        s = compute_section(mid_section)
+        assert s.Y == pytest.approx(125.6, abs=0.01)
+
     def test_Iyy_positive(self, mid_section):
         s = compute_section(mid_section)
         assert s.Iyy > 0

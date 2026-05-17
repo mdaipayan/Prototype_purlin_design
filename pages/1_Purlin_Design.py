@@ -19,56 +19,152 @@ st.set_page_config(
 # ── CSS overrides ───────────────────────────────────────────────
 st.markdown("""
 <style>
-/* Sidebar width */
-[data-testid="stSidebar"] { min-width: 320px; }
+:root {
+    --ink: #102033;
+    --muted: #64748B;
+    --navy: #0B1F3A;
+    --blue: #2563EB;
+    --sky: #38BDF8;
+    --green: #059669;
+    --red: #DC2626;
+    --amber: #D97706;
+    --line: #D8E2EF;
+    --panel: rgba(255,255,255,0.94);
+}
+.stApp { background: linear-gradient(180deg, #F7FAFC 0%, #EEF4F9 46%, #F8FAFC 100%); color: var(--ink); }
+.block-container { padding-top: 1.7rem; padding-bottom: 3rem; max-width: 1240px; }
+[data-testid="stSidebar"] { min-width: 330px; background: linear-gradient(180deg, #F8FBFE 0%, #EEF5FB 100%); }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { color: #475569; }
+[data-testid="stMetric"] {
+    background: rgba(255,255,255,0.86);
+    border: 1px solid #E2E8F0;
+    border-radius: 18px;
+    padding: 14px 16px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+[data-testid="stDataFrame"] { border: 1px solid #E2E8F0; border-radius: 18px; overflow: hidden; box-shadow: 0 14px 36px rgba(15, 23, 42, 0.05); }
+button[kind="primary"] { border-radius: 999px; }
+button[kind="secondary"] { border-radius: 999px; }
 
 /* Section headers */
 .section-header {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #1B3A6B;
+    font-size: 0.74rem;
+    font-weight: 850;
+    color: #1D4ED8;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 6px 0 2px;
-    border-bottom: 2px solid #2E6FBF;
-    margin-bottom: 10px;
+    letter-spacing: 0.08em;
+    padding: 14px 0 6px;
+    border-bottom: 1px solid #C7D8ED;
+    margin: 8px 0 12px;
 }
 
-/* Check row colouring */
-.ok-row   { background: #EAF6EE !important; }
-.fail-row { background: #FCEAEA !important; }
-
-/* Result metric box */
-.metric-box {
-    background: #EEF3FA;
-    border-left: 4px solid #2E6FBF;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
+.page-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px;
+    padding: 30px 34px;
+    margin-bottom: 18px;
+    color: white;
+    background:
+        radial-gradient(circle at 84% 16%, rgba(56,189,248,0.34), transparent 30%),
+        linear-gradient(135deg, #07182D 0%, #0B1F3A 52%, #1E40AF 100%);
+    box-shadow: 0 24px 62px rgba(15, 23, 42, 0.20);
 }
+.page-hero:after {
+    content: "";
+    position: absolute;
+    right: -120px;
+    bottom: -170px;
+    width: 360px;
+    height: 360px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.045);
+}
+.page-hero h1 { margin: 9px 0 8px; font-size: clamp(2rem, 4vw, 3.35rem); line-height: 1.04; letter-spacing: -0.045em; }
+.page-hero p { margin: 0; max-width: 840px; color: #D8E8F7; line-height: 1.68; }
+.eyebrow {
+    display: inline-flex;
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 999px;
+    padding: 6px 12px;
+    background: rgba(255,255,255,0.11);
+    color: #DFF6FF;
+    font-size: 0.74rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.hero-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.hero-chip { border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.10); color: #EAF6FF; border-radius: 999px; padding: 7px 11px; font-size: 0.84rem; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 16px 0 22px; }
+.kpi-card {
+    border: 1px solid #DCE6F1;
+    border-radius: 20px;
+    padding: 17px 18px;
+    background: var(--panel);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.07);
+}
+.kpi-label { color: var(--muted); font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.kpi-value { margin-top: 8px; font-size: 1.48rem; line-height: 1.05; font-weight: 850; letter-spacing: -0.03em; color: var(--navy); }
+.kpi-note { margin-top: 6px; color: #64748B; font-size: 0.84rem; }
+
+.panel {
+    border: 1px solid #DCE6F1;
+    border-radius: 24px;
+    padding: 20px;
+    background: var(--panel);
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.065);
+    margin-bottom: 18px;
+}
+.panel-title { margin: 0 0 4px; color: var(--navy); font-size: 1.05rem; font-weight: 850; letter-spacing: -0.018em; }
+.panel-subtitle { margin: 0 0 16px; color: var(--muted); font-size: 0.88rem; }
 
 /* Verdict banner */
-.verdict-pass { background:#EAF6EE; border:1.5px solid #1F7A4A;
-    border-radius:8px; padding:12px 18px; text-align:center; }
-.verdict-fail { background:#FCEAEA; border:1.5px solid #C0392B;
-    border-radius:8px; padding:12px 18px; text-align:center; }
+.verdict-pass, .verdict-fail {
+    border-radius: 24px;
+    padding: 18px 22px;
+    text-align: left;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+    font-size: 1.02rem;
+}
+.verdict-pass { background: linear-gradient(135deg, #ECFDF5, #FFFFFF); border: 1px solid #A7F3D0; color: #065F46; }
+.verdict-fail { background: linear-gradient(135deg, #FEF2F2, #FFFFFF); border: 1px solid #FECACA; color: #991B1B; }
 
-/* Professional design step cards */
 .step-card {
     border: 1px solid #D7E2F0;
-    border-left: 5px solid #2E6FBF;
-    border-radius: 12px;
-    padding: 14px 16px;
+    border-left: 6px solid #2563EB;
+    border-radius: 18px;
+    padding: 16px 18px;
     margin-bottom: 12px;
     background: #FFFFFF;
-    box-shadow: 0 6px 18px rgba(27, 58, 107, 0.07);
+    box-shadow: 0 12px 30px rgba(27, 58, 107, 0.07);
 }
-.step-card-ok { border-left-color: #1F7A4A; }
-.step-card-fail { border-left-color: #C0392B; }
-.step-title { font-size: 1rem; font-weight: 700; color: #1B3A6B; margin-bottom: 4px; }
-.step-clause { display: inline-block; background: #EEF3FA; color: #1B3A6B; border-radius: 999px; padding: 2px 9px; font-size: 0.75rem; font-weight: 700; margin-bottom: 8px; }
-.step-label { color: #5B6B7D; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 6px; }
-.step-value { color: #12263A; font-size: 0.92rem; }
+.step-card-ok { border-left-color: var(--green); }
+.step-card-fail { border-left-color: var(--red); }
+.step-title { font-size: 1rem; font-weight: 850; color: var(--navy); margin-bottom: 5px; }
+.step-clause { display: inline-block; background: #EFF6FF; color: #1D4ED8; border-radius: 999px; padding: 3px 10px; font-size: 0.72rem; font-weight: 850; margin-bottom: 8px; }
+.step-label { color: #64748B; font-size: 0.72rem; font-weight: 850; text-transform: uppercase; letter-spacing: 0.07em; margin-top: 8px; }
+.step-value { color: #12263A; font-size: 0.92rem; line-height: 1.55; }
+
+.check-pill { border-radius: 16px; padding: 11px 13px; margin-bottom: 9px; border: 1px solid; }
+.check-ok { background: #ECFDF5; border-color: #A7F3D0; color: #065F46; }
+.check-fail { background: #FEF2F2; border-color: #FECACA; color: #991B1B; }
+.check-pill b { display: block; }
+.check-pill span { font-size: 0.86rem; opacity: 0.88; }
+
+.viz-wrap { display: grid; grid-template-columns: 1.05fr 1fr; gap: 18px; align-items: stretch; }
+.bar-row { display: grid; grid-template-columns: 150px 1fr 78px; gap: 10px; align-items: center; margin: 10px 0; }
+.bar-label { color: #475569; font-size: 0.86rem; font-weight: 700; }
+.bar-track { height: 13px; border-radius: 999px; background: #E2E8F0; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #2563EB, #38BDF8); }
+.bar-fill.green { background: linear-gradient(90deg, #059669, #34D399); }
+.bar-fill.amber { background: linear-gradient(90deg, #D97706, #FBBF24); }
+.bar-value { color: #0F172A; font-size: 0.84rem; font-weight: 800; text-align: right; }
+.svg-card { display: flex; align-items: center; justify-content: center; min-height: 320px; }
+
+@media (max-width: 980px) { .kpi-grid, .viz-wrap { grid-template-columns: 1fr; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -96,6 +192,94 @@ def status_icon(s: str) -> str:
 def _fmt(value: float, digits: int = 3) -> str:
     """Format calculation values compactly for formula tables."""
     return f"{value:.{digits}f}"
+
+
+def _pct(value: float, limit: float) -> float:
+    """Return a bounded utilization percentage for compact visual bars."""
+    if limit <= 0:
+        return 0.0
+    return max(0.0, min((value / limit) * 100, 140.0))
+
+
+def kpi_card(label: str, value: str, note: str) -> str:
+    """Build a compact executive summary metric card."""
+    return f'''<div class="kpi-card">
+        <div class="kpi-label">{html.escape(label)}</div>
+        <div class="kpi-value">{html.escape(value)}</div>
+        <div class="kpi-note">{html.escape(note)}</div>
+    </div>'''
+
+
+def check_pill(chk: CheckResult, value_label: str | None = None) -> str:
+    """Render a pass/fail check as a polished pill."""
+    ok = chk.status == "OK"
+    icon = "✅" if ok else "❌"
+    klass = "check-ok" if ok else "check-fail"
+    detail = value_label or f"{chk.value} vs limit {chk.limit} {chk.unit}"
+    return (
+        f'<div class="check-pill {klass}">'
+        f'{icon} <b>{html.escape(chk.label)}</b>'
+        f'<span>{html.escape(detail)}</span></div>'
+    )
+
+
+def render_bar_rows(rows: list[tuple[str, float, float, str]], accent: str = "") -> str:
+    """Render labelled utilization bars using pure HTML/CSS."""
+    output = []
+    for label, value, limit, display in rows:
+        width = min(_pct(value, limit), 100.0)
+        output.append(
+            f'''<div class="bar-row">
+                <div class="bar-label">{html.escape(label)}</div>
+                <div class="bar-track"><div class="bar-fill {accent}" style="width:{width:.1f}%"></div></div>
+                <div class="bar-value">{html.escape(display)}</div>
+            </div>'''
+        )
+    return "".join(output)
+
+
+def z_section_svg(sec: ZSectionProps, res) -> str:
+    """Create an SVG schematic of the selected Z-section with centroid axes."""
+    width, height = 460, 320
+    scale_y = 230 / max(sec.D, 1)
+    max_flange = max(sec.b1, sec.b2, 1)
+    scale_x = 138 / max_flange
+    cx = width / 2
+    top_y = 42
+    web_x = cx
+    t_vis = max(sec.t * scale_x, 8)
+    top_len = sec.b1 * scale_x
+    bot_len = sec.b2 * scale_x
+    lip1 = sec.L1 * scale_y
+    lip2 = sec.L2 * scale_y
+    depth = sec.D * scale_y
+    centroid_x = web_x + res.section.X * scale_x
+    centroid_y = top_y + res.section.Y * scale_y
+    return f'''
+    <svg viewBox="0 0 {width} {height}" width="100%" height="320" role="img" aria-label="Z-section schematic">
+      <defs>
+        <linearGradient id="steel" x1="0" x2="1">
+          <stop offset="0" stop-color="#1D4ED8"/>
+          <stop offset="1" stop-color="#38BDF8"/>
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#0F172A" flood-opacity="0.16"/>
+        </filter>
+      </defs>
+      <rect x="10" y="10" width="440" height="300" rx="24" fill="#F8FAFC" stroke="#D8E2EF"/>
+      <g filter="url(#shadow)" stroke="url(#steel)" stroke-linecap="round" stroke-linejoin="round" stroke-width="{t_vis:.1f}" fill="none">
+        <path d="M {web_x:.1f} {top_y:.1f} L {web_x+top_len:.1f} {top_y:.1f} L {web_x+top_len:.1f} {top_y+lip1:.1f}"/>
+        <path d="M {web_x:.1f} {top_y:.1f} L {web_x:.1f} {top_y+depth:.1f}"/>
+        <path d="M {web_x:.1f} {top_y+depth:.1f} L {web_x-bot_len:.1f} {top_y+depth:.1f} L {web_x-bot_len:.1f} {top_y+depth-lip2:.1f}"/>
+      </g>
+      <line x1="42" y1="{centroid_y:.1f}" x2="418" y2="{centroid_y:.1f}" stroke="#94A3B8" stroke-dasharray="5 6"/>
+      <line x1="{centroid_x:.1f}" y1="26" x2="{centroid_x:.1f}" y2="294" stroke="#94A3B8" stroke-dasharray="5 6"/>
+      <circle cx="{centroid_x:.1f}" cy="{centroid_y:.1f}" r="7" fill="#F97316" stroke="white" stroke-width="3"/>
+      <text x="28" y="38" fill="#64748B" font-size="12" font-weight="700">Z-{sec.D:g} × {sec.t:g} mm</text>
+      <text x="28" y="58" fill="#64748B" font-size="11">b1={sec.b1:g}, b2={sec.b2:g}, lips={sec.L1:g}/{sec.L2:g} mm</text>
+      <text x="{centroid_x+12:.1f}" y="{centroid_y-10:.1f}" fill="#C2410C" font-size="12" font-weight="800">centroid</text>
+      <text x="320" y="286" fill="#334155" font-size="12" font-weight="800">A = {res.section.area:.2f} cm²</text>
+    </svg>'''
 
 
 def purlin_formula_steps(inp: PurlinInputs, sec: ZSectionProps, res) -> list[dict[str, str]]:
@@ -161,7 +345,7 @@ def purlin_formula_steps(inp: PurlinInputs, sec: ZSectionProps, res) -> list[dic
         {
             "Step": "5. Section properties",
             "IS reference": "IS 801 section-property basis",
-            "Formula / check": "Centre-line area/centroid/inertia model; Z = I/y",
+            "Formula / check": "Excel plate-line area/centroid/inertia model; Z = I/y",
             "Substitution": f"t={sec.t:g}, d={sec.d:g}, b1={sec.b1:g}, b2={sec.b2:g}, L1={sec.L1:g}, L2={sec.L2:g}, D={sec.D:g} mm",
             "Value / result": f"Ixx={_fmt(res.section.Ixx/1e4, 2)} cm⁴, Zxx-top={_fmt(res.section.Z1xx_top/1e3, 2)} cm³",
         },
@@ -292,15 +476,40 @@ with st.sidebar:
 # MAIN PAGE
 # ══════════════════════════════════════════════════════════════════
 
-st.header("🏗️ Purlin Design — IS 801-1975")
-st.caption(f"Project: **{project_name}**  |  Bay type: **{bay_type}**")
+st.markdown(
+    f"""
+<div class="page-hero">
+  <span class="eyebrow">Cold-formed steel design</span>
+  <h1>Purlin Design — IS 801-1975</h1>
+  <p>Professional Z-section calculation dashboard with live inputs, visual utilization summaries, section-property graphics, clause references, and an auditable PDF report.</p>
+  <div class="hero-meta">
+    <span class="hero-chip">Project: <b>{html.escape(project_name)}</b></span>
+    <span class="hero-chip">Bay type: <b>{html.escape(bay_type)}</b></span>
+    <span class="hero-chip">Section: <b>Z-{D_sec:g} × {t_sec:g} mm</b></span>
+  </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
 if not run_btn:
-    st.info("Configure inputs in the sidebar and click **▶ Run Design** to start.", icon="ℹ️")
-    with st.expander("How to use this app", expanded=True):
+    st.markdown(
+        """
+<div class="panel">
+  <div class="panel-title">Ready for design review</div>
+  <div class="panel-subtitle">Configure the engineering inputs in the sidebar, then run the calculation package.</div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">Workflow</div><div class="kpi-value">13 steps</div><div class="kpi-note">Clause-led checks</div></div>
+    <div class="kpi-card"><div class="kpi-label">Outputs</div><div class="kpi-value">PDF</div><div class="kpi-note">Formal report</div></div>
+    <div class="kpi-card"><div class="kpi-label">Visualization</div><div class="kpi-value">Live</div><div class="kpi-note">Utilization + section graphics</div></div>
+    <div class="kpi-card"><div class="kpi-label">Status</div><div class="kpi-value">Audit</div><div class="kpi-note">Pass/fail traceability</div></div>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    with st.expander("Design algorithm implemented", expanded=True):
         st.markdown("""
-**Design algorithm implemented** (13 steps per IS 801-1975):
-
 | Step | Description |
 |------|-------------|
 | 1 | Collect input data — geometry, loads, material |
@@ -316,8 +525,6 @@ if not run_btn:
 | 11 | Deflection serviceability check (Le/150) |
 | 12 | Purlin overlap / lap length check |
 | 13 | Final section adoption |
-
-Download the **PDF report** after running the design.
         """)
     st.stop()
 
@@ -358,6 +565,52 @@ else:
         unsafe_allow_html=True,
     )
 st.markdown("")
+
+# ── Executive KPI and visualization layer ────────────────────────
+governing_stress_check = max(
+    res.stress_checks,
+    key=lambda chk: (chk.value / chk.limit) if chk.limit else 0,
+    default=None,
+)
+governing_stress = governing_stress_check.value if governing_stress_check else 0
+governing_stress_limit = governing_stress_check.limit if governing_stress_check else 1
+deflection_ratio = max(
+    _pct(res.defl_check_c1.value, res.defl_check_c1.limit),
+    _pct(res.defl_check_c2.value, res.defl_check_c2.limit),
+)
+stress_ratio = _pct(governing_stress, governing_stress_limit)
+lap_ratio = _pct(res.M_at_lap, res.M_capacity)
+st.markdown(
+    '<div class="kpi-grid">'
+    + kpi_card("Adopted section", f"Z-{sec.D:g} × {sec.t:g}", f"{sec.d:g} mm web, {sec.b1:g}/{sec.b2:g} mm flanges")
+    + kpi_card("Governing stress", f"{stress_ratio:.0f}%", f"{governing_stress:.1f} / {governing_stress_limit:.1f} N/mm²")
+    + kpi_card("Deflection demand", f"{deflection_ratio:.0f}%", f"Limit = {res.delta_allow:.1f} mm")
+    + kpi_card("Overlap demand", f"{lap_ratio:.0f}%", f"Lap = {res.lap_used*1000:.0f} mm")
+    + '</div>',
+    unsafe_allow_html=True,
+)
+
+left_viz, right_viz = st.columns([1.05, 1])
+with left_viz:
+    st.markdown(
+        f'''<div class="panel svg-card">{z_section_svg(sec, res)}</div>''',
+        unsafe_allow_html=True,
+    )
+with right_viz:
+    st.markdown(
+        '''<div class="panel"><div class="panel-title">Design utilization snapshot</div>
+        <div class="panel-subtitle">Demand-to-capacity ratios for the governing checks.</div>'''
+        + render_bar_rows(
+            [
+                ("Bending stress", governing_stress, governing_stress_limit, f"{stress_ratio:.0f}%"),
+                ("Deflection", max(res.defl_check_c1.value, res.defl_check_c2.value), res.delta_allow, f"{deflection_ratio:.0f}%"),
+                ("Lap moment", res.M_at_lap, res.M_capacity, f"{lap_ratio:.0f}%"),
+                ("Flange slenderness", res.b1_t_actual, res.b1_t_limit, f"{_pct(res.b1_t_actual, res.b1_t_limit):.0f}%"),
+            ]
+        )
+        + '</div>',
+        unsafe_allow_html=True,
+    )
 
 # ── PDF Download ─────────────────────────────────────────────────
 pdf_bytes = generate_pdf_report(project_name, inp, sec, res)
