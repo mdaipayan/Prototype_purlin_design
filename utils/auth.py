@@ -8,20 +8,66 @@ from html import escape
 
 import streamlit as st
 
-DEFAULT_APP_PASSWORD = "purlin@2026"
+DEFAULT_APP_TOKEN = "purlin-dev-token"
 
 
-def _configured_password() -> tuple[str, bool]:
-    """Return the configured app password and whether it came from a secure source."""
-    secret_password = None
+def _split_tokens(value) -> list[str]:
+    """Normalize a token secret/env value into a list of non-empty tokens."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        candidates = value.replace("\n", ",").split(",")
+    elif isinstance(value, (list, tuple, set)):
+        candidates = value
+    else:
+        candidates = [value]
+    return [str(token).strip() for token in candidates if str(token).strip()]
+
+
+def _secret_value(name: str):
+    """Read a Streamlit secret without failing in local/test contexts."""
     try:
-        secret_password = st.secrets.get("APP_PASSWORD")
+        return st.secrets.get(name)
     except Exception:
-        secret_password = None
+        return None
 
-    env_password = os.environ.get("APP_PASSWORD")
-    password = secret_password or env_password or DEFAULT_APP_PASSWORD
-    return str(password), bool(secret_password or env_password)
+
+def _configured_tokens() -> tuple[list[str], bool]:
+    """Return configured access tokens and whether they came from a secure source.
+
+    Preferred configuration is token based: set `APP_ACCESS_TOKEN` or
+    `APP_ACCESS_TOKENS` in Streamlit secrets or environment variables.
+    `APP_PASSWORD` is still accepted for backwards compatibility only.
+    """
+    token_sources = [
+        _secret_value("APP_ACCESS_TOKENS"),
+        _secret_value("APP_ACCESS_TOKEN"),
+        os.environ.get("APP_ACCESS_TOKENS"),
+        os.environ.get("APP_ACCESS_TOKEN"),
+    ]
+    legacy_sources = [
+        _secret_value("APP_PASSWORD"),
+        os.environ.get("APP_PASSWORD"),
+    ]
+
+    tokens: list[str] = []
+    for source in token_sources:
+        tokens.extend(_split_tokens(source))
+    if tokens:
+        return tokens, True
+
+    legacy_tokens: list[str] = []
+    for source in legacy_sources:
+        legacy_tokens.extend(_split_tokens(source))
+    if legacy_tokens:
+        return legacy_tokens, True
+
+    return [DEFAULT_APP_TOKEN], False
+
+
+def _token_is_valid(candidate: str, valid_tokens: list[str]) -> bool:
+    """Compare a submitted token against configured tokens in constant time."""
+    return any(hmac.compare_digest(candidate, token) for token in valid_tokens)
 
 
 def brand_mark(size: int = 54) -> str:
@@ -139,12 +185,18 @@ def _auth_styles() -> None:
 
 
 def require_authentication() -> None:
-    """Stop page execution until the user has entered the configured password."""
+    """Stop page execution until the user has entered a configured access token."""
     _auth_styles()
-    password, configured_securely = _configured_password()
+    valid_tokens, configured_securely = _configured_tokens()
 
     if st.session_state.get("authenticated"):
         return
+
+    query_token = st.query_params.get("token") or st.query_params.get("access_token")
+    if query_token and _token_is_valid(str(query_token), valid_tokens):
+        st.session_state["authenticated"] = True
+        st.query_params.clear()
+        st.rerun()
 
     st.markdown(
         f'''
@@ -156,36 +208,37 @@ def require_authentication() -> None:
       <div class="brand-subtitle">Protected engineering workspace</div>
     </div>
   </div>
-  <div class="auth-eyebrow">Password required</div>
-  <h1>Secure access</h1>
-  <div class="auth-copy">Enter the app password to access calculation modules, section databases, and PDF reports.</div>
+  <div class="auth-eyebrow">Access token required</div>
+  <h1>Secure token access</h1>
+  <div class="auth-copy">Enter your Streamlit access token to unlock calculation modules, section databases, and PDF reports.</div>
 </div>
 ''',
         unsafe_allow_html=True,
     )
 
     with st.form("login_form"):
-        entered_password = st.text_input("Password", type="password", placeholder="Enter app password")
+        entered_token = st.text_input("Access token", type="password", placeholder="Paste Streamlit access token")
         submitted = st.form_submit_button("Unlock dashboard", type="primary", use_container_width=True)
 
     if submitted:
-        if hmac.compare_digest(entered_password, password):
+        if _token_is_valid(entered_token, valid_tokens):
             st.session_state["authenticated"] = True
             st.rerun()
         else:
-            st.error("Incorrect password. Please try again.", icon="🔒")
+            st.error("Invalid access token. Please try again.", icon="🔒")
 
     if not configured_securely:
         st.info(
-            "For production, set `APP_PASSWORD` in Streamlit secrets or as an environment variable. "
-            "The local fallback password is `purlin@2026`.",
+            "For production, set `APP_ACCESS_TOKEN` or `APP_ACCESS_TOKENS` in Streamlit secrets "
+            "or as an environment variable. The local fallback token is `purlin-dev-token`.",
             icon="ℹ️",
         )
     st.stop()
 
+
 def render_security_controls() -> None:
     """Render a compact authenticated-session control in the sidebar."""
-    st.markdown('<div class="auth-status">🔐 Secure session active</div>', unsafe_allow_html=True)
+    st.markdown('<div class="auth-status">🔐 Token session active</div>', unsafe_allow_html=True)
     if st.button("Log out", use_container_width=True):
         st.session_state.pop("authenticated", None)
         st.rerun()

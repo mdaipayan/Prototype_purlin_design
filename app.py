@@ -148,7 +148,7 @@ with st.sidebar:
     st.caption("Use the Streamlit page menu above to open the active design module.")
     st.markdown("---")
     st.markdown("**Active module:** Purlin Design")
-    st.markdown("**Security:** password protected")
+    st.markdown("**Security:** token protected")
 
 st.markdown('<div class="section-kicker">Design modules</div>', unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)

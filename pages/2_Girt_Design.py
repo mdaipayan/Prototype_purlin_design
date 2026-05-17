@@ -24,7 +24,7 @@ st.markdown(
 </style>
 <div class="roadmap-hero">
   <h1>🏢 Girt Design</h1>
-  <p>This module is password-protected and reserved for the upcoming wall-girt workflow. The layout is prepared for inputs, load combinations, member checks, serviceability checks, and report output.</p>
+  <p>This module is token-protected and reserved for the upcoming wall-girt workflow. The layout is prepared for inputs, load combinations, member checks, serviceability checks, and report output.</p>
   <div class="roadmap-grid">
     <div class="roadmap-step"><b>01 Inputs</b>Wall bay geometry, girt spacing, support conditions, and section dimensions.</div>
     <div class="roadmap-step"><b>02 Loads</b>Wind and gravity combinations applicable to girts.</div>
